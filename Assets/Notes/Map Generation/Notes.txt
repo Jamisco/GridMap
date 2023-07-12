@@ -1,0 +1,30 @@
+Simplex2: 0: 7.344929 -- 1: 7.931685 -- 2: 7.523051 -- 3: 7.722129 -- 4: 8.319363 -- 5: 12.6886 -- 6: 11.9342 -- 7: 13.62112 -- 8: 12.16471 -- 9: 10.75021 -- 10: 0 -- 
+
+Simple 2X: 0: 0.4587645 -- 1: 7.574949 -- 2: 7.158861 -- 3: 9.943455 -- 4: 10.67961 -- 5: 17.25168 -- 6: 19.26811 -- 7: 17.13432 -- 8: 9.313987 -- 9: 1.216259 -- 10: 0 -- 
+
+Cellular: 0: 80.90418 -- 1: 19.09582 -- 2: 0 -- 3: 0 -- 4: 0 -- 5: 0 -- 6: 0 -- 7: 0 -- 8: 0 -- 9: 0 -- 10: 0 -- 
+
+Perlin: 0: 0 -- 1: 0 -- 2: 6.583752 -- 3: 13.00776 -- 4: 29.70105 -- 5: 19.83113 -- 6: 17.30945 -- 7: 13.56686 -- 8: 0 -- 9: 0 -- 10: 0 -- 
+
+Value Cubric: 0 -- 1: 0 -- 2: 0 -- 3: 4.336735 -- 4: 64.36074 -- 5: 30.14706 -- 6: 1.155462 -- 7: 0 -- 8: 0 -- 9: 0 -- 10: 0 -- 
+
+Value: 0: 0 -- 1: 1.244082 -- 2: 6.495651 -- 3: 12.44082 -- 4: 26.16977 -- 5: 31.7296 -- 6: 17.37312 -- 7: 4.546956 -- 8: 0 -- 9: 0 -- 10: 0 -- 
+
+
+For Ocean Values
+	- You Want Low frequencies but large volume
+		- All values generated will be OCEAN ONLY values
+			- Options
+				- Frequency: .03
+				- Fractal: None
+				- Noise: [Perlin, Value Cubic, Value]
+				- Gradient first 50% water
+			
+For Land Values (Continents)
+	- We want high frequencies with small volumes
+		- All Values Generated Will be Land ONLY
+		- 
+		
+
+
+
