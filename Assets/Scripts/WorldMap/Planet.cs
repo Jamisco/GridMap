@@ -34,7 +34,22 @@ namespace Assets.Scripts.WorldMap
         [SerializeField]
         public List<BiomeProperties> Biomes = new List<BiomeProperties>();
 
+        public void RandomizeBiome()
+        {
+            Biomes.Clear();
 
+            int biomeCount = UnityEngine.Random.Range(3, 6);
+
+            foreach (Biome item in Enum.GetValues(typeof(Biome)))
+            {
+                BiomeProperties biome = new BiomeProperties();
+                biome.Biome = item;
+                biome.BiomeColor = UnityEngine.Random.ColorHSV(0, 1, 0, 1, 0, 1, 1, 1);
+
+
+                Biomes.Add(biome);
+            }
+        }
         public Vector2Int CurrentSunRayFocus
         {
             get
@@ -62,14 +77,14 @@ namespace Assets.Scripts.WorldMap
 
         public Biome GetBiome(float temperature, float precipitation)
         {
-            // The Biome table is structured in a 2d graph format, where the x axis is the temperature and the y axis is the precipitation
+            // The Biome table is structured in a 2d graph format, where the X axis is the temperature and the Y axis is the precipitation
             // so we have to convert a 2d graph coordinate to array index
             
             // think of temp and precipitation as percentages
 
-            // Example, if temp = 0.5f, then it means the temperature is at the Math.floor(.5 * 9) = 4. Where 9 in the max index of x axis of our array
+            // Example, if temp = 0.5f, then it means the temperature is at the Math.floor(.5 * 9) = 4. Where 9 in the max index of X axis of our array
 
-            // Example, if precipitation = 0.3f,  then it means the precipitation is at the Math.floor(.3 * 9) = 2. Where 9 in the max index of y axis of our array
+            // Example, if precipitation = 0.3f,  then it means the precipitation is at the Math.floor(.3 * 9) = 2. Where 9 in the max index of Y axis of our array
 
             // so (.5, .3) = (.5 * 9, .3 * 9) = (4.5, 2.7) = (4, 3) = in 2D graph coords -  = (6, 4) in our array coords/index
 
@@ -78,10 +93,10 @@ namespace Assets.Scripts.WorldMap
             // (.68, .85) = (6.12, 7.65) = (6, 8) 2d coords = (1, 6) in our array coords/index
 
             // This gives us the formula to get array index
-            // x = 9 - Math.Round(precipitation * 9)
-            // y = Math.Round(temperature * 9)
+            // X = 9 - Math.Round(precipitation * 9)
+            // Y = Math.Round(temperature * 9)
 
-            // 2d coor (x, y) = array indexes (9 - y, x)
+            // 2d coor (X, Y) = array indexes (9 - Y, X)
 
             // First we have to convert these numbers from 2d coordinates to array coords
 
@@ -100,8 +115,8 @@ namespace Assets.Scripts.WorldMap
         private static readonly int[,] BiomeTable = new int[10, 10]
         {
             #region Explanation
-            // x axis = temperature from cold to hot
-            // y axis = precipitation from dry to wet
+            // X axis = temperature from cold to hot
+            // Y axis = precipitation from dry to wet
 
 
             // each number represents the int conversion of the Biome
@@ -109,10 +124,10 @@ namespace Assets.Scripts.WorldMap
             // min temperature = -40f
             // max temperature = 140f
 
-            // equation to get temperature = -40 + 18x, with x being the index
+            // equation to get temperature = -40 + 18x, with X being the index
 
             // Rainfall is from 0 - 500cm 
-            // equation to get rainfall = 50x, with x being the index
+            // equation to get rainfall = 50x, with X being the index
 
 
             // Temp:  -40, -22, -4, 14, 32, 50, 68, 86, 104, and 122. Fahrenheit

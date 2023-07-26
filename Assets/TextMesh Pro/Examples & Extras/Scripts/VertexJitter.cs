@@ -125,7 +125,7 @@ namespace TMPro.Examples
                     Vector3[] sourceVertices = cachedMeshInfo[materialIndex].vertices;
 
                     // Determine the center point of each character at the baseline.
-                    //Vector2 charMidBasline = new Vector2((sourceVertices[vertexIndex + 0].x + sourceVertices[vertexIndex + 2].x) / 2, charInfo.baseLine);
+                    //Vector2 charMidBasline = new Vector2((sourceVertices[vertexIndex + 0].X + sourceVertices[vertexIndex + 2].X) / 2, charInfo.baseLine);
                     // Determine the center point of each character.
                     Vector2 charMidBasline = (sourceVertices[vertexIndex + 0] + sourceVertices[vertexIndex + 2]) / 2;
 

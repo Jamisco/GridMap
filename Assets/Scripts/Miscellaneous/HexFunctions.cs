@@ -70,7 +70,7 @@ namespace Assets.Scripts.Miscellaneous
             public int z;
 
             /// <summary>
-            /// Converts a position (x, y) to axial coordinates. Returns Axial Struct
+            /// Converts a position (X, Y) to axial coordinates. Returns Axial Struct
             /// </summary>
             /// <param name="x"></param>
             /// <param name="y"></param>
@@ -97,7 +97,7 @@ namespace Assets.Scripts.Miscellaneous
                 return a;
             }
             /// <summary>
-            /// Converts a position (x, y) to axial coordinates
+            /// Converts a position (X, Y) to axial coordinates
             /// </summary>
             /// <param name="x"></param>
             /// <param name="y"></param>
@@ -112,7 +112,7 @@ namespace Assets.Scripts.Miscellaneous
                 return a.Coordinates;
             }
             /// <summary>
-            /// Converts a position (x, y) to axial coordinates
+            /// Converts a position (X, Y) to axial coordinates
             /// </summary>
             /// <param name="x"></param>
             /// <param name="y"></param>
@@ -299,7 +299,7 @@ namespace Assets.Scripts.Miscellaneous
 
 
             // the below code works if you are not wrapping...
-            //return Mathf.Max(Mathf.Abs(startPosition.z - targetPosition.z), Mathf.Max(Mathf.Abs(startPosition.x - targetPosition.x), Mathf.Abs(startPosition.y - targetPosition.y)));
+            //return Mathf.Max(Mathf.Abs(startPosition.Z - targetPosition.Z), Mathf.Max(Mathf.Abs(startPosition.X - targetPosition.X), Mathf.Abs(startPosition.Y - targetPosition.Y)));
         }
 
         public enum Edges { None, Horizontal, Vertical, Both }
@@ -310,7 +310,7 @@ namespace Assets.Scripts.Miscellaneous
             float distanceY = 0;
 
             // When wrapping values across the map for any axis, do not account for the Z values
-            // since wrapping only takes place across a 2d axis, we only need to account for x and y axis
+            // since wrapping only takes place across a 2d axis, we only need to account for X and Y axis
             switch (edges)
             {
                 case Edges.None:
@@ -392,7 +392,7 @@ namespace Assets.Scripts.Miscellaneous
             int distanceZ = 0;
 
             // When wrapping values across the map for any axis, do not account for the Z values
-            // since wrapping only takes place across a 2d axis, we only need to account for x and y axis
+            // since wrapping only takes place across a 2d axis, we only need to account for X and Y axis
             switch (edges)
             {
                 case Edges.None:
@@ -518,7 +518,7 @@ namespace Assets.Scripts.Miscellaneous
             switch (neighborSide)
             {
                 case 1:
-                    // increase both x and y by 1
+                    // increase both X and Y by 1
 
                     if (tempPos.y % 2 == 1)
                     {
@@ -626,7 +626,7 @@ namespace Assets.Scripts.Miscellaneous
 
             // top side
 
-            int endXPos = startPos.x + minWidth; // represents the x position to stop at
+            int endXPos = startPos.x + minWidth; // represents the X position to stop at
 
             int startX = startPos.x; //start at top
             int startY = startPos.y + height;       // start at top
@@ -647,7 +647,7 @@ namespace Assets.Scripts.Miscellaneous
             startX = startPos.x + height; // start at bottom
             startY = startPos.y - height; // start at bottom
 
-            endXPos = startX + minWidth; // represents the x position to stop at
+            endXPos = startX + minWidth; // represents the X position to stop at
 
             for (int y = startY; y < startPos.y; y++)
             {

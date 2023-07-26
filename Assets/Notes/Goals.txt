@@ -1,0 +1,12 @@
+The Objective of this program is to find a more efficient and effective means to generate large tile maps
+
+ - We hope to complete this projects in 2 weeks.
+ 
+ 
+ - The tile map should allow individual access and manipulation of tiles, 
+	- Both visually and logically
+
+- The map should be able to generate a 1000 x 1000 map in less than 1 second
+- The map will allow for the user to use different materials in order to generate their wanted textures
+
+- possible, there should be heights

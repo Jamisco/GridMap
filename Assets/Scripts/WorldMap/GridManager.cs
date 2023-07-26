@@ -2,242 +2,163 @@ using Assets;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
-using Assets.Scripts.Miscellaneous;
-using UnityEditor;
-using Cysharp.Threading.Tasks;
-using System.Threading.Tasks;
-using UnityEngine.Events;
-using System;
-using Unity.VisualScripting;
 using static Assets.Scripts.WorldMap.Planet;
+using Assets.Scripts.WorldMap;
+using static Assets.Scripts.WorldMap.HexTile;
+using System.Diagnostics;
+using Debug = UnityEngine.Debug;
+using System;
+using UnityEditor;
+using static Assets.Scripts.Miscellaneous.HexFunctions;
+using Axial = Assets.Scripts.WorldMap.HexTile.Axial;
 
 namespace Assets.Scripts.WorldMap
 {
+    [System.Serializable]
     public class GridManager : MonoBehaviour
     {
-        [SerializeField]  public float updateInterval = 1f;
+        public PlanetGenerator planetGenerator;
         
-        private Grid BaseGrid;
+        public HexTile hexPrefab;
+        public GameObject hexParent;
 
-        private Tilemap TileMap1;
-        private Tilemap TileMap2;
-
-        public Sprite MainSprite;
-        private HexTile MainTile;
-
-        public Material[] spriteMaterials;
-
-        private bool Initialized = false;
-
-        private PlanetGenerator biomeNoiseManager;
-        private SpriteContainer spriteContainer;
-
-        public Planet MainPlanet;
-
-        [SerializeField] public Gradient Temperature;
-
-        [SerializeField] public Gradient OceanGradient;
-
-        [SerializeField] public Gradient LandGradient;
-
-        [SerializeField] public DisplayColor displayColor = DisplayColor.All;
-
-        public enum DisplayColor { Temperature, Precipitation, Ocean, Land, LandOcean, All };
-
-        public bool pause = false;
-        public void Initialize()
-        {
-            BaseGrid = GetComponent<Grid>();
-
-            TileMap1 = BaseGrid.GetComponentByName<Tilemap>("map1");
-            TileMap2 = BaseGrid.GetComponentByName<Tilemap>("map2");
-
-            biomeNoiseManager = BaseGrid.GetComponent<PlanetGenerator>();
-
-            biomeNoiseManager.MainPlanet = MainPlanet;
-
-            spriteContainer = BaseGrid.GetComponent<SpriteContainer>();
-
-            MainTile = new HexTile();
-
-            MainTile.SetMap(this, TileMap1);
-
-            MainTile.sprite = MainSprite;
-
-            //TileMap1.GetComponent<TilemapRenderer>().material = spriteMaterials[0];
-
-            Initialized = true;
-        }
+        Dictionary<Axial, HexTile> HexTiles;
 
         private void Awake()
         {
-            Initialize();
-            GenerateMap();
+            HexTiles = new Dictionary<Axial, HexTile>();
+            GenerateGrid();
         }
 
-        void OnValidate()
+        Stopwatch timer = new Stopwatch();
+        public void GenerateGrid()
         {
-            
-        }
+            HexTiles.Clear();
+            DestroyAllChildren();
 
-        public void GenerateMap()
-        {
-            bool prevPayse = pause;
-            pause = true;
-            
-            TileMap1.ClearAllTiles();
-            TileMap2.ClearAllTiles();
+            ComputePlanetNoise();
 
-            biomeNoiseManager.MainPlanet = MainPlanet;
-            biomeNoiseManager.SetComputeSize();
-            biomeNoiseManager.ComputeBiomeNoise();             
+            HexTile.SetStaticVariables(hexPrefab.stepDistance, hexPrefab.outerHexSize);
 
-            Vector3Int tempPos;
-            TileMap1.size = (Vector3Int)MainPlanet.PlanetSize;
+            HexTile hex;
+            timer.Start();
 
-            for (int x = 0; x < TileMap1.size.x; x++)
+            for (int x = 0; x < planetGenerator.PlanetSize.x; x++)
             {
-                for (int y = 0; y < TileMap1.size.y; y++)
+                for (int z = 0; z < planetGenerator.PlanetSize.y; z++)
                 {
-                    tempPos = new Vector3Int(x, y, 0);
+                    hex = Instantiate(hexPrefab, hexParent.transform);
+                    hex.Initialize(this, x, z);
+                    
+                    HexTiles.Add(hex.AxialCoordinates, hex);
 
-                    float percent = biomeNoiseManager.GetTemperature(x, y);                  
-
-                    TileMap1.SetTile(tempPos, MainTile);
-
-                    //Vector3Int temp = new Vector3Int(x, y);
-
-                    //TileMap1.SetTileFlags(temp, TileFlags.None);
-
-                    //TileMap1.SetColor(temp, new Color(1, 1, 1, percent));
+                    hex.CreateMesh();
                 }
             }
 
-            cutOff = OceanGradient.colorKeys[0].time;
-            TileMap1.RefreshAllTiles();
-            pause = prevPayse;
-            
-        }
-
-        List<Vector2> PermanentOcean = new List<Vector2>();
-        float cutOff;
-        public Color GetColor(int x, int y)
-        {
-            float temp = biomeNoiseManager.GetTemperature(x, y);
-
-            float rain = biomeNoiseManager.GetPrecipitation(x, y);
-
-            float land = biomeNoiseManager.GetLand(x, y);
-
-            float ocean = biomeNoiseManager.GetOcean(x, y);
-  
-            Vector2 position = new Vector2(x, y);
-
-            if (ocean <= cutOff)
+            foreach (HexTile hexTile in HexTiles.Values)
             {
-                if (!PermanentOcean.Contains(position))
-                {
-                    PermanentOcean.Add(position);
-                }
+                hexTile.CreateSlopeMesh();
+
+                hexTile.DrawMesh();
             }
 
-            Biome b = MainPlanet.GetBiome(temp, rain);
+            timer.Stop();
+            TimeSpan ts = timer.Elapsed;
 
-            switch (displayColor)
+            string formattedTime = $"{ts:mm\\m\\ ss\\s\\ fff\\m\\s}";
+
+            Debug.Log(formattedTime);
+        }
+
+        private void ComputePlanetNoise()
+        {
+            planetGenerator.SetComputeSize();
+            planetGenerator.ComputeBiomeNoise();
+        }
+        private void Update()
+        {
+            Check4Click();
+        }
+
+        public void Check4Click()
+        {
+            if (Input.GetMouseButtonDown(0))
             {
-                case DisplayColor.Temperature:
-                    
-                    return Temperature.Evaluate(temp);
-                    
-                case DisplayColor.Precipitation:
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                RaycastHit hitInfo;
 
-                    return Temperature.Evaluate(rain);
-
-                case DisplayColor.Ocean:
-
-                    return OceanGradient.Evaluate(ocean);
-
-                case DisplayColor.Land:
-
-                    return LandGradient.Evaluate(land);
-
-                case DisplayColor.LandOcean:
-                            
-                    if(!IsOcean(position))
+                if (Physics.Raycast(ray, out hitInfo))
+                {
+                    if (hitInfo.collider != null)
                     {
-                       return LandGradient.Evaluate(land);
+                        // get hextile from hitinfo
+
+                        HexTile hex = hitInfo.collider.GetComponent<HexTile>();
+
+                        hex.HighlightHex();
+
+                        Debug.Log(hex.AxialCoordinates.ToString());
                     }
-                    else
-                    {
-                        return OceanGradient.Evaluate(ocean);
-                    }
-
-                case DisplayColor.All:
-
-                    return MainPlanet.GetColor(b);
-                    
-                default:
-                    return MainPlanet.GetColor(b);
-            }  
-
-            bool IsOcean(Vector2 pos)
-            {
-                if(PermanentOcean.Contains(pos))
-                {
-                    return true;
                 }
-
-                return false;
             }
-        }
-
-        public void UpdateMap()
-        {
-            biomeNoiseManager.MainPlanet = MainPlanet;
-            biomeNoiseManager.SetComputeSize();
-            
-            biomeNoiseManager.ComputeBiomeNoise();
-            TileMap1.RefreshAllTiles();
-
-            PermanentOcean.Clear();
-        }
-
-
-        UniTask tasker;
-        void Update()
-        {
-            if(!pause)
+            else if(Input.GetMouseButtonDown(1))
             {
-                UpdateMap();
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                RaycastHit hitInfo;
+
+                if (Physics.Raycast(ray, out hitInfo))
+                {
+                    if (hitInfo.collider != null)
+                    {
+                        // get hextile from hitinfo
+
+                        HexTile hex = hitInfo.collider.GetComponent<HexTile>();
+
+                        hex.ResetColor();
+
+                        Debug.Log(hex.AxialCoordinates.ToString());
+                    }
+                }
             }
         }
+
+        public HexTile GetHexTile(Axial coordinates)
+        {
+            HexTile hex = null;
+            HexTiles.TryGetValue(coordinates, out hex);
+
+            return hex;
+        }
+
+        private void DestroyAllChildren()
+        {
+            int childCount = hexParent.transform.childCount;
+
+            for (int i = childCount - 1; i >= 0; i--)
+            {
+                Transform child = hexParent.transform.GetChild(i);
+                Destroy(child.gameObject);
+                // If you want to use DestroyImmediate instead, replace the line above with:
+                // DestroyImmediate(child.gameObject);
+            }
+        }
+
     }
 
     [CustomEditor(typeof(GridManager))]
-    public class GridManagerUI : Editor
-    {       
+    public class ClassButtonEditor : Editor
+    {
         public override void OnInspectorGUI()
         {
-            GridManager myScript = (GridManager)target;
+            DrawDefaultInspector();
 
-            if (GUILayout.Button("Initialize"))
+            GridManager exampleScript = (GridManager)target;
+
+            if (GUILayout.Button("Generate Grid"))
             {
-                myScript.Initialize();
+                exampleScript.GenerateGrid();
             }
-
-            if (GUILayout.Button("Generate Map"))
-            {
-                myScript.GenerateMap();
-            }
-
-            if (GUILayout.Button("RegenerateMap TileMap"))
-            {
-                myScript.Invoke("GenerateMap", 0);
-            }
-
-            base.OnInspectorGUI();
         }
     }
-
 }

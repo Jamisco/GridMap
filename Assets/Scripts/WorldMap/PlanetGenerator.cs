@@ -11,6 +11,7 @@ using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Assets.Scripts.WorldMap.Planet;
 using static FastNoiseLite;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
@@ -19,7 +20,7 @@ namespace Assets.Scripts.WorldMap
 {
     public class PlanetGenerator : MonoBehaviour
     {
-        [NonSerialized] public Planet MainPlanet;
+        [SerializeField] public Planet MainPlanet;
         [SerializeField] public bool CircularSun = false;
         [SerializeField] public bool VerticalSun = false;
 
@@ -27,6 +28,7 @@ namespace Assets.Scripts.WorldMap
         [SerializeField] int planetFractal = 1;
 
         [SerializeField] private bool PrintArrays = false;
+        [SerializeField] private bool RandomBiomeColor = false;
 
         [Header("Land Noise")]
         
@@ -68,10 +70,17 @@ namespace Assets.Scripts.WorldMap
         [SerializeField] Vector2Int oceanOffset;
 
 
-
         private void Awake()
         {
             UpdateNoise();
+        }
+
+        public Vector2Int PlanetSize
+        {
+            get
+            {
+                return MainPlanet.PlanetSize;
+            }            
         }
 
         private void UpdateNoise()
@@ -93,6 +102,12 @@ namespace Assets.Scripts.WorldMap
             {
                 PrintArrays = false;
                 PrintDistrubutionPercent();
+            }
+
+            if (RandomBiomeColor == true)
+            {
+                RandomBiomeColor = false;
+                MainPlanet.RandomizeBiome();
             }
 
             UpdateNoise();
@@ -153,9 +168,7 @@ namespace Assets.Scripts.WorldMap
                 }
             });
 
-            RandomizeTemp();
-
-            
+            RandomizeTemp();       
         }
 
         private void ComputeTemperatureNoise(int x, int y)
@@ -205,7 +218,7 @@ namespace Assets.Scripts.WorldMap
         /// <returns></returns>
         float IntensityFromSunrayFocus(Vector2Int position)
         {
-            // measure only y axis, remember that the sun is thesame across y axis
+            // measure only Y axis, remember that the sun is thesame across Y axis
             // use a normalization formula
             // use sin and wrap the formula
             float percentDistance;
@@ -314,7 +327,7 @@ namespace Assets.Scripts.WorldMap
             multiplier = landLevelScale;
             adder = planetFractal * 2;
 
-            //tempNoise = landFNoise.GetNoise(multiplier * x / MainPlanet.PlanetSize.x + landOffset.x, multiplier * y / MainPlanet.PlanetSize.y + landOffset.y);
+            //tempNoise = landFNoise.GetNoise(multiplier * X / MainPlanet.PlanetSize.X + landOffset.X, multiplier * Y / MainPlanet.PlanetSize.Y + landOffset.Y);
 
             tempNoise = landFNoise.GetNoise(x + landOffset.x, y + landOffset.y);
 
@@ -354,6 +367,18 @@ namespace Assets.Scripts.WorldMap
         private float GetNoise(float x, float y)
         {
             return Mathf.PerlinNoise(x, y);
+        }
+
+        public Color GetBiome(int x, int y)
+        {
+            float temp, precip;
+
+            temp = PlanetTemperature[x, y];
+            precip = PlanetPrecipitation[x, y];
+
+            Biome biome = MainPlanet.GetBiome(temp, precip);
+
+            return MainPlanet.GetColor(biome);
         }
 
         private void DistributionOfValues(int arrayType, float value)

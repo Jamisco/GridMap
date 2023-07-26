@@ -33,7 +33,7 @@
 // ;;,''.......... |   |_____',,;;;____:___cllo________.___|   |___|     \xkk|   |KK_______ool___:::;________;;;_______...'',;;:ccclllloo
 // c:;,''......... |         |:::/     '   |lo/        |           |      \dx|   |0/       \d|   |cc/        |'/       \......',,;;:ccllo
 // ol:;,'..........|    _____|ll/    __    |o/   ______|____    ___|   |   \o|   |/   ___   \|   |o/   ______|/   ___   \ .......'',;:clo
-// dlc;,...........|   |::clooo|    /  |   |x\___   \KXKKK0|   |dol|   |\   \|   |   |   |   |   |d\___   \..|   |  /   /       ....',:cl
+// dlc;,...........|   |::clooo|    /  |   |X\___   \KXKKK0|   |dol|   |\   \|   |   |   |   |   |d\___   \..|   |  /   /       ....',:cl
 // xoc;'...  .....'|   |llodddd|    \__|   |_____\   \KKK0O|   |lc:|   |'\       |   |___|   |   |_____\   \.|   |_/___/...      ...',;:c
 // dlc;'... ....',;|   |oddddddo\          |          |Okkx|   |::;|   |..\      |\         /|   |          | \         |...    ....',;:c
 // ol:,'.......',:c|___|xxxddollc\_____,___|_________/ddoll|___|,,,|___|...\_____|:\ ______/l|___|_________/...\________|'........',;::cc
@@ -354,8 +354,8 @@ public class FastNoiseLite
     /// </summary>
     /// <example>
     /// Example usage with GetNoise
-    /// <code>DomainWarp(ref x, ref y)
-    /// noise = GetNoise(x, y)</code>
+    /// <code>DomainWarp(ref X, ref Y)
+    /// noise = GetNoise(X, Y)</code>
     /// </example>
     [MethodImpl(OPTIMISE)]
     public void DomainWarp(ref FNLfloat x, ref FNLfloat y)
@@ -379,8 +379,8 @@ public class FastNoiseLite
     /// </summary>
     /// <example>
     /// Example usage with GetNoise
-    /// <code>DomainWarp(ref x, ref y, ref z)
-    /// noise = GetNoise(x, y, z)</code>
+    /// <code>DomainWarp(ref X, ref Y, ref Z)
+    /// noise = GetNoise(X, Y, Z)</code>
     /// </example>
     [MethodImpl(OPTIMISE)]
     public void DomainWarp(ref FNLfloat x, ref FNLfloat y, ref FNLfloat z)
@@ -1080,8 +1080,8 @@ public class FastNoiseLite
         /*
          * --- Skew moved to TransformNoiseCoordinate method ---
          * const FNfloat F2 = 0.5f * (SQRT3 - 1);
-         * FNfloat s = (x + y) * F2;
-         * x += s; y += s;
+         * FNfloat s = (X + Y) * F2;
+         * X += s; Y += s;
         */
 
         int i = FastFloor(x);
@@ -1147,8 +1147,8 @@ public class FastNoiseLite
         /*
          * --- Rotation moved to TransformNoiseCoordinate method ---
          * const FNfloat R3 = (FNfloat)(2.0 / 3.0);
-         * FNfloat r = (x + y + z) * R3; // Rotation, not skew
-         * x = r - x; y = r - y; z = r - z;
+         * FNfloat r = (X + Y + Z) * R3; // Rotation, not skew
+         * X = r - X; Y = r - Y; Z = r - Z;
         */
 
         int i = FastRound(x);
@@ -1246,8 +1246,8 @@ public class FastNoiseLite
         /*
          * --- Skew moved to TransformNoiseCoordinate method ---
          * const FNfloat F2 = 0.5f * (SQRT3 - 1);
-         * FNfloat s = (x + y) * F2;
-         * x += s; y += s;
+         * FNfloat s = (X + Y) * F2;
+         * X += s; Y += s;
         */
 
         int i = FastFloor(x);
@@ -1373,8 +1373,8 @@ public class FastNoiseLite
         /*
          * --- Rotation moved to TransformNoiseCoordinate method ---
          * const FNfloat R3 = (FNfloat)(2.0 / 3.0);
-         * FNfloat r = (x + y + z) * R3; // Rotation, not skew
-         * x = r - x; y = r - y; z = r - z;
+         * FNfloat r = (X + Y + Z) * R3; // Rotation, not skew
+         * X = r - X; Y = r - Y; Z = r - Z;
         */
 
         int i = FastFloor(x);
@@ -2298,8 +2298,8 @@ public class FastNoiseLite
         /*
          * --- Skew moved to TransformNoiseCoordinate method ---
          * const FNfloat F2 = 0.5f * (SQRT3 - 1);
-         * FNfloat s = (x + y) * F2;
-         * x += s; y += s;
+         * FNfloat s = (X + Y) * F2;
+         * X += s; Y += s;
         */
 
         int i = FastFloor(x);
@@ -2393,8 +2393,8 @@ public class FastNoiseLite
         /*
          * --- Rotation moved to TransformDomainWarpCoordinate method ---
          * const FNfloat R3 = (FNfloat)(2.0 / 3.0);
-         * FNfloat r = (x + y + z) * R3; // Rotation, not skew
-         * x = r - x; y = r - y; z = r - z;
+         * FNfloat r = (X + Y + Z) * R3; // Rotation, not skew
+         * X = r - X; Y = r - Y; Z = r - Z;
         */
 
         int i = FastRound(x);
