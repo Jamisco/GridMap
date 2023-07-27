@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   outerRadius: 10
   innerRadius: 8.660254
-  outerHexMultiplier: 1.3
-  stepDistance: 3
+  outerHexMultiplier: 1
+  stepDistance: 8
   outerHexSize: 1
   maxHeight: 30
   InnerHexColor: {r: 1, g: 1, b: 1, a: 1}

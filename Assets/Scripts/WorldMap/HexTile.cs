@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.UIElements;
+using static UnityEditor.Searcher.SearcherWindow.Alignment;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -542,13 +543,14 @@ namespace Assets.Scripts.WorldMap
             mesh.uv = uv;
         }
 
+
+        public float mul = .1f;
         private Vector2 GetHexUV(Vector3 vertexPosition)
         {
             // Assuming hexagons are uniformly spaced in a Grid along the Z-axis
             // Calculate the relative position of the vertex within the hexagon
             float relativeX = vertexPosition.x / hexSettings.innerRadius;
-            float relativeY = vertexPosition.y;
-
+            float relativeY = vertexPosition.y / (hexSettings.outerRadius - hexSettings.innerRadius);
             float relativeZ = vertexPosition.z / (0.5f * hexSettings.outerRadius);
 
             // Calculate UV coordinates based on the relative position
@@ -557,16 +559,14 @@ namespace Assets.Scripts.WorldMap
             float uvY = 0.5f + (0.25f * relativeY);
             float uvZ = 0.5f + (0.25f * relativeZ);
 
-            if(relativeY != 0)
-            {
-                return new Vector2(uvX, (uvY + uvZ) / 2);
-            }
-            else
+            if(vertexPosition.y == Position.y)
             {
                 return new Vector2(uvX, uvZ);
             }
-        }
 
+            // Return the UV coordinate
+            return new Vector2(uvX, uvZ);
+        }
         List<Vector3> CombineVertices()
         {
             List<Vector3> combinedVertices = new List<Vector3>(Vertices);
