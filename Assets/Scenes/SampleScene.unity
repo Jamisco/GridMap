@@ -400,15 +400,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 98215ffd7452d2f41bd72e02ed17c169, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stepDistance: 3
-  outerHexSize: 3
-  height: 0
   GridCoordinates: {x: 0, y: 0}
-  InnerHexColor: {r: 0, g: 0.9528302, b: 0.12545711, a: 1}
-  OuterHexColor: {r: 0.9339623, g: 0.110137045, b: 0.110137045, a: 1}
-  SlopeColor: {r: 1, g: 1, b: 1, a: 1}
-  HighlightColor: {r: 1, g: 0.9972117, b: 0, a: 1}
-  elevation: 0
 --- !u!64 &761220339
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -628,6 +620,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   planetGenerator: {fileID: 1605946132}
+  HexSettings: {fileID: 11400000, guid: c966756f1912d5a45a766bb5fef9cf23, type: 2}
   hexPrefab: {fileID: 761220338}
   hexParent: {fileID: 2091030831}
 --- !u!4 &1605946131
@@ -660,7 +653,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MainPlanet:
-    PlanetSize: {x: 3, y: 3}
+    PlanetSize: {x: 5, y: 5}
     InitialSunRayFocus: {x: 10, y: 10}
     SunlightVector: {x: 0, y: 0}
     SunlightIntensity: 1

@@ -18,7 +18,9 @@ namespace Assets.Scripts.WorldMap
     public class GridManager : MonoBehaviour
     {
         public PlanetGenerator planetGenerator;
-        
+
+        public HexSettings HexSettings;
+
         public HexTile hexPrefab;
         public GameObject hexParent;
 
@@ -27,6 +29,14 @@ namespace Assets.Scripts.WorldMap
         private void Awake()
         {
             HexTiles = new Dictionary<Axial, HexTile>();
+
+            HexTile.hexSettings = HexSettings;
+
+
+            //HexTile.outerRadius = outerRadius;
+            //HexTile.innerRadius = innerRadius;
+            //HexTile.stepDistance = stepDistance;
+
             GenerateGrid();
         }
 
@@ -38,9 +48,8 @@ namespace Assets.Scripts.WorldMap
 
             ComputePlanetNoise();
 
-            HexTile.SetStaticVariables(hexPrefab.stepDistance, hexPrefab.outerHexSize);
-
             HexTile hex;
+
             timer.Start();
 
             for (int x = 0; x < planetGenerator.PlanetSize.x; x++)
@@ -96,7 +105,7 @@ namespace Assets.Scripts.WorldMap
 
                         HexTile hex = hitInfo.collider.GetComponent<HexTile>();
 
-                        hex.HighlightHex();
+                        hex.ToggleInnerHighlight();
 
                         Debug.Log(hex.AxialCoordinates.ToString());
                     }
@@ -115,7 +124,7 @@ namespace Assets.Scripts.WorldMap
 
                         HexTile hex = hitInfo.collider.GetComponent<HexTile>();
 
-                        hex.ResetColor();
+                        hex.ToggleOuterHighlight();
 
                         Debug.Log(hex.AxialCoordinates.ToString());
                     }

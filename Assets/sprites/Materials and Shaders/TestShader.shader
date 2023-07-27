@@ -50,7 +50,12 @@
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 o.color = v.color;
-                o.y = v.vertex.y;
+                
+                //_HeightRange = mul(unity_ObjectToWorld, float4(_HeightRange.x, _HeightRange.y, 0, 0));
+                
+                //_HeightColor = mul(unity_ObjectToWorld, float4(_HeightColor, 0, 0));
+                o.y = mul(unity_ObjectToWorld, v.vertex).y;
+                
                 return o;
             }
 

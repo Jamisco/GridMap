@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using Roytazz.HexMesh;
+using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.UIElements;
@@ -11,36 +13,15 @@ namespace Assets.Scripts.WorldMap
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class HexTile : MonoBehaviour
     {
-        public static float outerRadius = 10f;
-        public static float innerRadius = outerRadius * 0.866025404f;
+        public static HexSettings hexSettings;
 
-        public static float outerHexMultiplier = 1f;
-        public static float step = 1f;
-
-        public float stepDistance;
-        public float outerHexSize;
-
-        /// <summary>
-        /// The corners of the hex1 tile. Starting from the top center corner and going clockwise
-        /// </summary>
-        public static Vector3[] VertexCorners =
-        {
-            new Vector3(0f, 0f, outerRadius),
-            new Vector3(innerRadius, 0f, 0.5f * outerRadius),
-            new Vector3(innerRadius, 0f, -0.5f * outerRadius),
-            new Vector3(0f, 0f, -outerRadius),
-            new Vector3(-innerRadius, 0f, -0.5f * outerRadius),
-            new Vector3(-innerRadius, 0f, 0.5f * outerRadius),
-            new Vector3(0f, 0f, outerRadius)
-        };
-
-        /// <summary>
+/// <summary>
         /// The index is the respective i
         /// Will return a tuple of 3 ints,
         /// int 1 = x direction, int 2 = y direction, int 3 = x offset
         /// If you are on a even x axis, that is an offset, so add the offset number to the x
         /// </summary>
-        public static (int, int, int)[] StepVertexModifier = 
+        public static (int, int, int)[] StepVertexModifier =
         {
             //
              new (0, 1, 1),
@@ -51,23 +32,15 @@ namespace Assets.Scripts.WorldMap
              new (-1, 1, 1 ),
         };
 
-
-        public float height = 0f;
-
         private Vector3 InnerVertexPosition(int i)
         {
-            return VertexCorners[i];
+            return hexSettings.VertexCorners[i];
         }
 
         private Vector3 OuterVertexPosition(int i)
         {
-            return VertexCorners[i] * outerHexMultiplier;
+            return hexSettings.VertexCorners[i] * hexSettings.outerHexMultiplier;
         }
-
-        //private Vector3 StepInnerVertexPosition(int i)
-        //{
-        //    //return StepVertexModifier[i] * 3 + Vertices[i]; ;
-        //}
 
         private Vector3 StepOuterVertexPosition(int i)
         {
@@ -81,17 +54,16 @@ namespace Assets.Scripts.WorldMap
             // we multiply step by 2 because, the step applies to both hexes
             // hex1 1 is shifted 3 units away, and hex1 is also shifted 3 units away
             // totaling 6
-            Vector3 mod = new Vector3(temp.Item1, 0f, temp.Item2) * ((step/2) * outerHexMultiplier);
+            Vector3 mod = new Vector3(temp.Item1, 0f, temp.Item2) * ((hexSettings.stepDistance / 2) * hexSettings.outerHexMultiplier);
 
             return mod;
         }
-
 
         public bool IsOffset
         {
             get
             {
-                return GridCoordinates.y % 2 == 0 ? false : true; 
+                return GridCoordinates.y % 2 == 0 ? false : true;
             }
         }
 
@@ -117,7 +89,7 @@ namespace Assets.Scripts.WorldMap
         };
 
         /// <summary>
-        /// A coordinate system for hexagonal grids that uses three axes, X, Y, and Z. The X-axis points southeast, the Y-axis points south, and the Z-axis points southwest. The sum of the three axial coordinates should always be 0. Used to overcome the offset of the hexagonal grid.
+        /// A coordinate system for hexagonal Grids that uses three axes, X, Y, and Z. The X-axis points southeast, the Y-axis points south, and the Z-axis points southwest. The sum of the three axial coordinates should always be 0. Used to overcome the offset of the hexagonal Grid.
         /// </summary>
         public struct Axial : IEquatable<Axial>
         {
@@ -240,9 +212,8 @@ namespace Assets.Scripts.WorldMap
             /// </summary>
             public Vector3Int Coordinates { get { return new Vector3Int(X, Y, Z); } }
         }
-
-        /// <summary>
-        /// Will return the position of the hex1 tile on the grid map at the given coordinates
+       /// <summary>
+        /// Will return the position of the hex1 tile on the Grid map at the given coordinates
         /// </summary>
         /// <param name="x"></param>
         /// <param name="z"></param>
@@ -250,9 +221,9 @@ namespace Assets.Scripts.WorldMap
         public static Vector3 GetPosition(int x, int z)
         {
             Vector3 position;
-            position.x = (x + (z * 0.5f) - (z / 2)) * (HexMetrics.innerRadius * 2f) + (x * step);
+            position.x = (x + (z * 0.5f) - (z / 2)) * (hexSettings.innerRadius * 2f) + (x * hexSettings.stepDistance);
             position.y = 0f;
-            position.z = z * (HexMetrics.outerRadius * 1.5f) + (z * step);
+            position.z = z * (hexSettings.outerRadius * 1.5f) + (z * hexSettings.stepDistance);
 
             return position;
         }
@@ -282,22 +253,9 @@ namespace Assets.Scripts.WorldMap
             vertexIndex % 6, vertexIndex == 11 ? 6 : vertexIndex + 1, (vertexIndex + 1) % 6
         };
 
-        //public static int[] SetInnerTriangles(int vertexCount) =>
-        //    new int[12] {
-        //0 + vertexCount, 5 + vertexCount, 4 + vertexCount,
-        //1 + vertexCount, 0 + vertexCount, 4 + vertexCount,
-        //2 + vertexCount, 1 + vertexCount, 4 + vertexCount,
-        //3 + vertexCount, 2 + vertexCount, 4 + vertexCount
-        //};
-
         public Axial AxialCoordinates;
         public Vector2Int GridCoordinates;
         public Vector3 Position { get; set; }
-
-        public Color InnerHexColor;
-        public Color OuterHexColor;
-        public Color SlopeColor;
-        public Color HighlightColor;
 
         Mesh mesh;
         MeshCollider meshCollider;
@@ -312,22 +270,11 @@ namespace Assets.Scripts.WorldMap
 
         public GridManager Grid { get; set; }
 
-        public float elevation = 0f;
-
-        public static void SetStaticVariables(float stepDistance, float outerHexSize)
-        {
-            step = stepDistance;
-            outerHexMultiplier = outerHexSize;
-        }
-
         private void Awake()
         {
             Vertices = new List<Vector3>(6);
             Triangles = new List<int>(12);
             colors = new List<Color>(6);
-
-            step = stepDistance;
-            outerHexMultiplier = outerHexSize;
 
             SlopeVertices = new List<Vector3>(4);
             SlopeTriangles = new List<int>(6);
@@ -335,19 +282,20 @@ namespace Assets.Scripts.WorldMap
 
             mesh = GetComponent<MeshFilter>().mesh;
             meshCollider = GetComponent<MeshCollider>();
+
+            
         }
 
-        public void Initialize(GridManager grid, int x, int z)
+        public void Initialize(GridManager Grid, int x, int z)
         {
-            Grid = grid;
-            
+            this.Grid = Grid;
+
             AxialCoordinates = Axial.ToAxial(x, z);
             GridCoordinates = new Vector2Int(x, z);
 
-            float y = UnityEngine.Random.Range(0, 00);
-            height = y;
+            float y = UnityEngine.Random.Range(0, hexSettings.maxHeight);
 
-            Position = GetPosition(x, z) * outerHexMultiplier + new Vector3(0,y,0);
+            Position = GetPosition(x, z) * hexSettings.outerHexMultiplier + new Vector3(0, y, 0);
 
             transform.localPosition = Position;
         }
@@ -367,7 +315,9 @@ namespace Assets.Scripts.WorldMap
                 Vertices.Add(InnerVertexPosition(i));
             }
 
-            AddColors(InnerHexColor);
+            // create random color
+
+            AddColors(hexSettings.InnerHexColor);
 
             CreateOuterHexMesh();
         }
@@ -387,12 +337,12 @@ namespace Assets.Scripts.WorldMap
                 Triangles.AddRange(SetOuterTriangles(i + 6));
             }
 
-            AddColors(OuterHexColor);
+            AddColors(hexSettings.InnerHexColor);
         }
-        
+
         private Vector3 InnerHexDiff()
         {
-            float length = Mathf.Abs( Vector3.Distance(Vertices[0], Vertices[6]));
+            float length = Mathf.Abs(Vector3.Distance(Vertices[0], Vertices[6]));
 
             float shift = length / Mathf.Sqrt(2);
 
@@ -403,7 +353,7 @@ namespace Assets.Scripts.WorldMap
         {
             // slope mesh will start from outer hex1 vertices and slope towards inner hex1 vertice
             int[] sideLink = { 5, 0, 1 };
-            
+
             SlopeVertices.Clear();
             SlopeTriangles.Clear();
             SlopeColors.Clear();
@@ -431,50 +381,67 @@ namespace Assets.Scripts.WorldMap
                 p1 += 6;
                 p2 += 6;
 
-                // the current hex1's i vertices
-                Vector3 pos1 = StepOuterVertexPosition(i) + Vertices[p1];
-                Vector3 pos2 = StepOuterVertexPosition(i) + Vertices[p2];
+                Vector3 pos1 = Vertices[p1];
+                Vector3 pos2 = Vertices[p2];
 
-                pos1.y -= (Position.y - hex1.Position.y) / 2;
-                pos2.y -= (Position.y - hex1.Position.y) / 2;
+                // the current hex1's i vertices
+                Vector3 pos3 = StepOuterVertexPosition(i) + Vertices[p1];
+                Vector3 pos4 = StepOuterVertexPosition(i) + Vertices[p2];
+
+                pos3.y -= (Position.y - hex1.Position.y) / 2;
+                pos4.y -= (Position.y - hex1.Position.y) / 2;
 
                 int sv = SlopeVertices.Count + Vertices.Count;
 
-                SlopeVertices.Add(pos1);
-                SlopeVertices.Add(pos2);
+                SlopeVertices.Add(pos1); // sv + 0
+                SlopeVertices.Add(pos2); // sv + 1
+
+                SlopeVertices.Add(pos3); // sv + 2
+                SlopeVertices.Add(pos4); // sv + 3
 
                 SlopeTriangles.AddRange(new int[6] {
-                        p1, sv + 0, sv + 1,
-                        p1, sv + 1, p2
+                        sv + 0, sv + 2, sv + 3,
+                        sv + 0, sv + 3, sv + 1
                     });
 
-                SlopeColors.Add(SlopeColor);
-                SlopeColors.Add(SlopeColor);
+                SlopeColors.Add(hexSettings.OuterHexColor);
+                SlopeColors.Add(hexSettings.OuterHexColor);
+
+                SlopeColors.Add(hexSettings.OuterHexColor);
+                SlopeColors.Add(hexSettings.OuterHexColor);
 
                 // Check for next surrounding hex1
                 // if it exist, add triangle
-                // we do this bcuz there is a little gap between the slope and the next hex1
+                // we do this bcuz there is a little gap between the 2 slope of the hex
 
                 // next surrounding hex1
                 int nextSide = (i + 1) % 6;
 
                 HexTile hex2 = surroundingHex[nextSide];
 
+                Vector3 IPos35 = Vector3.positiveInfinity;
                 Vector3 IPos3 = Vector3.positiveInfinity;
 
-                if (hex2 != null)
+                if (hex2 != null && (i == 0 || i == 1))
                 {
-                    // we multiply by 2 to get the exact position and not just half position
-                    // this gets the outerhex position of surround hex1 1
-                    IPos3 = StepOuterVertexPosition(nextSide) + Vertices[p2];
+                    IPos35 = StepOuterVertexPosition(i) * 2 + pos2;
 
-                    SlopeVertices.Add(IPos3);
+                    // if the hex has 2 adjacent slopes, we link them together
+                    IPos3 = StepOuterVertexPosition(nextSide) * 2 + pos2;
+
+                    IPos35.y -= (Position.y - hex1.Position.y);
+                    IPos3.y -= (Position.y - hex2.Position.y);
+
+                    SlopeVertices.Add(IPos35); // sv + 4
+                    SlopeVertices.Add(IPos3); // sv + 5
 
                     SlopeTriangles.AddRange(new int[3] {
-                                p2, sv + 1, sv + 2,
+                                sv + 1, sv + 4, sv + 5,
                             });
 
-                    SlopeColors.Add(SlopeColor);
+                    SlopeColors.Add(hexSettings.OuterHexColor);
+                    SlopeColors.Add(hexSettings.OuterHexColor);
+
                 }
             }
         }
@@ -528,7 +495,7 @@ namespace Assets.Scripts.WorldMap
 
             return surroundingHexs;
         }
-        
+
         /// <summary>
         /// Will return the position of a corner in the inner hex1
         /// </summary>
@@ -548,8 +515,6 @@ namespace Assets.Scripts.WorldMap
         {
             return Vertices[index + 6];
         }
-
-
 
         public void DrawMesh(Vector3 position = default)
         {
@@ -579,28 +544,28 @@ namespace Assets.Scripts.WorldMap
 
         private Vector2 GetHexUV(Vector3 vertexPosition)
         {
-            // Assuming hexagons are uniformly spaced in a grid along the Z-axis
-            // Calculate UV coordinates based on the Z-position
-            float uvX = vertexPosition.x; // Use X position as UV X coordinate
-            float uvY = vertexPosition.z; // Use Z position as UV Y coordinate
+            // Assuming hexagons are uniformly spaced in a Grid along the Z-axis
+            // Calculate the relative position of the vertex within the hexagon
+            float relativeX = vertexPosition.x / hexSettings.innerRadius;
+            float relativeY = vertexPosition.y;
 
-            // Normalize the UV coordinates to [0, 1]
-            uvX /= (2f * Mathf.PI); // Assuming the hexagons have a radius of 1
-            uvY /= (2f * Mathf.PI); // Assuming the hexagons have a radius of 1
+            float relativeZ = vertexPosition.z / (0.5f * hexSettings.outerRadius);
 
-            // Return the UV coordinate
-            return new Vector2(uvX, uvY);
+            // Calculate UV coordinates based on the relative position
+            // Using a custom range for UV coordinates based on the hexagon dimensions
+            float uvX = 0.5f + (0.25f * relativeX);
+            float uvY = 0.5f + (0.25f * relativeY);
+            float uvZ = 0.5f + (0.25f * relativeZ);
+
+            if(relativeY != 0)
+            {
+                return new Vector2(uvX, (uvY + uvZ) / 2);
+            }
+            else
+            {
+                return new Vector2(uvX, uvZ);
+            }
         }
-
-        private static readonly Vector2[] hexUVs = new Vector2[]
-        {
-            new Vector2(0.5f, 1f),   // Top vertex
-            new Vector2(0f, 0.75f),  // Bottom-left vertex
-            new Vector2(0f, 0.25f),  // Top-left vertex
-            new Vector2(0.5f, 0f),   // Bottom vertex
-            new Vector2(1f, 0.25f),  // Bottom-right vertex
-            new Vector2(1f, 0.75f),  // Top-right vertex
-        };
 
         List<Vector3> CombineVertices()
         {
@@ -631,26 +596,47 @@ namespace Assets.Scripts.WorldMap
             Destroy(gameObject);
         }
 
-        public void HighlightHex()
+        public bool InnerHexIsHighlighted = false;
+        public bool OuterHexIsHighlighted = false;
+        public void ToggleInnerHighlight()
         {
-            for (int i = 0; i < Vertices.Count; i++)
+            Color hColor = hexSettings.InnerHighlightColor;
+            
+            if (InnerHexIsHighlighted)
             {
-                colors[i] = HighlightColor;
+                hColor = hexSettings.InnerHexColor;
+            }
+  
+            for (int i = 0; i < 6; i++)
+            {
+                colors[i] = hColor;
             }
 
+            InnerHexIsHighlighted = !InnerHexIsHighlighted;
+            
             mesh.colors = CombineColors().ToArray();
             mesh.RecalculateNormals();
+
         }
 
-        public void ResetColor()
+        public void ToggleOuterHighlight()
         {
-            for (int i = 0; i < Vertices.Count; i++)
+            Color hColor = hexSettings.OuterHighlightColor;
+
+            if (OuterHexIsHighlighted)
             {
-                colors[i] = InnerHexColor;
+                hColor = hexSettings.OuterHexColor;
+            }
+
+            for (int i = 6; i < 12; i++)
+            {
+                colors[i] = hColor;
             }
 
             mesh.colors = CombineColors().ToArray();
             mesh.RecalculateNormals();
+
+            OuterHexIsHighlighted = !OuterHexIsHighlighted;
         }
 
         private void AddColors(Color color)
