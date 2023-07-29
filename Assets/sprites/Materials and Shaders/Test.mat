@@ -66,5 +66,5 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _HeightColor: {r: 0.5, g: 4, b: 0, a: 0}
-    - _HeightRange: {r: 0, g: 30, b: 0, a: 0}
+    - _HeightRange: {r: 0, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []

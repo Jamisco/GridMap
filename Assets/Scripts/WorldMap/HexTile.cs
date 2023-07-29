@@ -441,6 +441,8 @@ namespace Assets.Scripts.WorldMap
                     SlopeColors.Add(hex1.InnerColor);
                     SlopeColors.Add(hex2.InnerColor);
 
+                    //s
+
                 }
             }
         }
