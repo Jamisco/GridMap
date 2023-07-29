@@ -28,6 +28,12 @@ namespace Assets.Scripts.WorldMap
 
         public List<Texture2D> Texutures;
 
+        public HexDisplay hexDisplay;
+
+        public enum HexDisplay { Color, Texture}
+
+        
+
         private void Awake()
         {
             HexTiles = new Dictionary<Axial, HexTile>();
@@ -54,6 +60,7 @@ namespace Assets.Scripts.WorldMap
                 for (int z = 0; z < planetGenerator.PlanetSize.y; z++)
                 {
                     hex = Instantiate(hexPrefab, hexParent.transform);
+                    
                     hex.Initialize(this, x, z);
                     
                     HexTiles.Add(hex.AxialCoordinates, hex);
@@ -66,7 +73,18 @@ namespace Assets.Scripts.WorldMap
             {
                 hexTile.CreateSlopeMesh();
 
-                hexTile.SetTexture(RandomTextures());
+                if(hexDisplay == HexDisplay.Color)
+                {
+                    Color aColor = planetGenerator.GetBiomeColor(hexTile.GridCoordinates.x, hexTile.GridCoordinates.y);
+
+                    hexTile.SetColors(aColor);
+                }
+                else
+                {
+                    Texture2D texture = planetGenerator.GetBiomeTexture(hexTile.GridCoordinates.x, hexTile.GridCoordinates.y);
+
+                    hexTile.SetTexture(texture);
+                }
 
                 hexTile.DrawMesh();
             }

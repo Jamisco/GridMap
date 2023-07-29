@@ -20,8 +20,6 @@ namespace Assets.Scripts.WorldMap
         public float outerHexSize;
         public float maxHeight = 0f;
 
-        public Color InnerHexColor;
-        public Color OuterHexColor;
         public Color InnerHighlightColor;
         public Color OuterHighlightColor;
 
@@ -44,7 +42,6 @@ namespace Assets.Scripts.WorldMap
                 new Vector3(-innerRadius, 0f, 0.5f * outerRadius),
                 new Vector3(0f, 0f, outerRadius)
             };
-
         }
 
         [MenuItem("Assets/Hex Settings")]

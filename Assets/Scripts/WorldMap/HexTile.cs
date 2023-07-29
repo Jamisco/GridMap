@@ -257,16 +257,18 @@ namespace Assets.Scripts.WorldMap
         public Vector2Int GridCoordinates;
         public Vector3 Position { get; set; }
 
+        public Color InnerHexColor;
+        public Color OuterHexColor;
+
         Mesh mesh;
         MeshCollider meshCollider;
 
         List<Vector3> Vertices;
+        List<Color> VertexColors;
         List<int> Triangles;
-        List<Color> colors;
 
         List<Vector3> SlopeVertices;
         List<int> SlopeTriangles;
-        List<Color> SlopeColors;
 
         public GridManager Grid { get; set; }
 
@@ -274,16 +276,34 @@ namespace Assets.Scripts.WorldMap
         {
             Vertices = new List<Vector3>(6);
             Triangles = new List<int>(12);
-            colors = new List<Color>(6);
+            VertexColors = new List<Color>();
 
             SlopeVertices = new List<Vector3>(4);
             SlopeTriangles = new List<int>(6);
-            SlopeColors = new List<Color>(4);
 
             mesh = GetComponent<MeshFilter>().mesh;
             meshCollider = GetComponent<MeshCollider>();            
         }
 
+        public void SetColors(Color aColor, bool drawAfter = false)
+        {
+            VertexColors.Clear();
+
+            foreach(Vector3 pos in Vertices)
+            {
+                VertexColors.Add(aColor);
+            }
+
+            foreach (Vector3 pos in SlopeVertices)
+            {
+                VertexColors.Add(aColor);
+            }
+
+            if (drawAfter)
+            {
+                DrawMesh();
+            }
+        }
         public void SetTexture(Texture2D texture)
         {
             Renderer ren = GetComponent<Renderer>();
@@ -298,8 +318,9 @@ namespace Assets.Scripts.WorldMap
             AxialCoordinates = Axial.ToAxial(x, z);
             GridCoordinates = new Vector2Int(x, z);
 
-            float y = UnityEngine.Random.Range(0, hexSettings.maxHeight);
-
+            //float y = UnityEngine.Random.Range(0, hexSettings.maxHeight);
+            float y = 0;
+            
             Position = GetPosition(x, z) * hexSettings.outerHexMultiplier + new Vector3(0, y, 0);
 
             transform.localPosition = Position;
@@ -310,7 +331,6 @@ namespace Assets.Scripts.WorldMap
             mesh.Clear();
             Vertices.Clear();
             Triangles.Clear();
-            colors.Clear();
 
             Triangles.AddRange(SetInnerTriangles(Vertices.Count));
 
@@ -319,8 +339,6 @@ namespace Assets.Scripts.WorldMap
             {
                 Vertices.Add(InnerVertexPosition(i));
             }
-
-            AddInnerColors(hexSettings.InnerHexColor);
 
             CreateOuterHexMesh();
         }
@@ -339,8 +357,6 @@ namespace Assets.Scripts.WorldMap
             {
                 Triangles.AddRange(SetOuterTriangles(i + 6));
             }
-
-            AddInnerColors(hexSettings.InnerHexColor);
         }
 
         public void CreateSlopeMesh()
@@ -350,7 +366,6 @@ namespace Assets.Scripts.WorldMap
 
             SlopeVertices.Clear();
             SlopeTriangles.Clear();
-            SlopeColors.Clear();
 
             List<HexTile> surroundingHex = GetSurroundingHexes();
 
@@ -398,12 +413,6 @@ namespace Assets.Scripts.WorldMap
                         sv + 0, sv + 3, sv + 1
                     });
 
-                SlopeColors.Add(hexSettings.OuterHexColor);
-                SlopeColors.Add(hexSettings.OuterHexColor);
-
-                SlopeColors.Add(hexSettings.OuterHexColor);
-                SlopeColors.Add(hexSettings.OuterHexColor);
-
                 // Check for next surrounding hex1
                 // if it exist, add triangle
                 // we do this bcuz there is a little gap between the 2 slope of the hex
@@ -443,9 +452,6 @@ namespace Assets.Scripts.WorldMap
                         sv + 1, sv + 3, sv + 4,
                         sv + 3, sv + 5, sv + 4
                     });
-
-                    SlopeColors.Add(hexSettings.OuterHexColor);
-                    SlopeColors.Add(hexSettings.OuterHexColor);
                 }
 
                 Vector3 GetTriangleCenter(Vector3 pos1, Vector3 pos2, Vector3 pos3)
@@ -454,21 +460,6 @@ namespace Assets.Scripts.WorldMap
                 }
             }
         }
-
-        public Color MergeColors(Color color1, Color color2, Color color3)
-        {
-            // Calculate the average RGB components of the three colors
-            float averageRed = (color1.r + color2.r + color3.r) / 3f;
-            float averageGreen = (color1.g + color2.g + color3.g) / 3f;
-            float averageBlue = (color1.b + color2.b + color3.b) / 3f;
-
-            // Create and return the merged color
-            Color mergedColor = new Color(averageRed, averageGreen, averageBlue);
-            return mergedColor;
-        }
-
-
-
         public Texture2D AddWatermark(Texture2D background, Texture2D watermark, Texture2D third)
         {
 
@@ -520,7 +511,8 @@ namespace Assets.Scripts.WorldMap
             mesh.vertices = CombineVertices().ToArray();
             mesh.triangles = CombineTriangles().ToArray();
             meshCollider.sharedMesh = mesh;
-            mesh.colors = CombineColors().ToArray();
+            mesh.colors = VertexColors.ToArray();
+
             SetHexMeshUVs();
             mesh.RecalculateNormals();
 
@@ -576,14 +568,6 @@ namespace Assets.Scripts.WorldMap
             return combinedTriangles;
         }
 
-        List<Color> CombineColors()
-        {
-            List<Color> combinedColors = new List<Color>(colors);
-            combinedColors.AddRange(SlopeColors);
-
-            return combinedColors;
-        }
-
         public bool InnerHexIsHighlighted = false;
         public bool OuterHexIsHighlighted = false;
         public void ToggleInnerHighlight()
@@ -592,17 +576,17 @@ namespace Assets.Scripts.WorldMap
             
             if (InnerHexIsHighlighted)
             {
-                hColor = hexSettings.InnerHexColor;
+                hColor = InnerHexColor;
             }
   
             for (int i = 0; i < 6; i++)
             {
-                colors[i] = hColor;
+                VertexColors[i] = hColor;
             }
 
             InnerHexIsHighlighted = !InnerHexIsHighlighted;
-            
-            mesh.colors = CombineColors().ToArray();
+
+            mesh.colors = VertexColors.ToArray();
             mesh.RecalculateNormals();
 
         }
@@ -612,27 +596,18 @@ namespace Assets.Scripts.WorldMap
 
             if (OuterHexIsHighlighted)
             {
-                hColor = hexSettings.OuterHexColor;
+                hColor = OuterHexColor;
             }
 
             for (int i = 6; i < 12; i++)
             {
-                colors[i] = hColor;
+                VertexColors[i] = hColor;
             }
 
-            mesh.colors = CombineColors().ToArray();
+            mesh.colors = VertexColors.ToArray();
             mesh.RecalculateNormals();
 
             OuterHexIsHighlighted = !OuterHexIsHighlighted;
-        }
-        private void AddInnerColors(Color color)
-        {
-            colors.Add(color);
-            colors.Add(color);
-            colors.Add(color);
-            colors.Add(color);
-            colors.Add(color);
-            colors.Add(color);
         }
     }
 }

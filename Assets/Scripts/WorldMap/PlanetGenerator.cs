@@ -369,7 +369,7 @@ namespace Assets.Scripts.WorldMap
             return Mathf.PerlinNoise(x, y);
         }
 
-        public Color GetBiome(int x, int y)
+        public Color GetBiomeColor(int x, int y)
         {
             float temp, precip;
 
@@ -380,7 +380,17 @@ namespace Assets.Scripts.WorldMap
 
             return MainPlanet.GetColor(biome);
         }
+        public Texture2D GetBiomeTexture(int x, int y)
+        {
+            float temp, precip;
 
+            temp = PlanetTemperature[x, y];
+            precip = PlanetPrecipitation[x, y];
+
+            Biome biome = MainPlanet.GetBiome(temp, precip);
+
+            return MainPlanet.GetTexture(biome);
+        }
         private void DistributionOfValues(int arrayType, float value)
         {
             // initialize 10 array values

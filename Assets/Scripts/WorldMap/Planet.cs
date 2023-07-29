@@ -44,8 +44,7 @@ namespace Assets.Scripts.WorldMap
             {
                 BiomeProperties biome = new BiomeProperties();
                 biome.Biome = item;
-                biome.BiomeColor = UnityEngine.Random.ColorHSV(0, 1, 0, 1, 0, 1, 1, 1);
-
+                biome.Color = UnityEngine.Random.ColorHSV(0, 1, 0, 1, 0, 1, 1, 1);
 
                 Biomes.Add(biome);
             }
@@ -109,7 +108,12 @@ namespace Assets.Scripts.WorldMap
 
         public Color GetColor(Biome biome)
         {
-            return Biomes.First(x => x.Biome == biome).BiomeColor;
+            return Biomes.First(x => x.Biome == biome).Color;
+        }
+
+        public Texture2D GetTexture(Biome biome)
+        {
+            return Biomes.First(x => x.Biome == biome).Texture;
         }
 
         private static readonly int[,] BiomeTable = new int[10, 10]
@@ -171,7 +175,8 @@ namespace Assets.Scripts.WorldMap
         public struct BiomeProperties
         {
             public Biome Biome;
-            public Color BiomeColor;            
+            public Color Color;
+            public Texture2D Texture;
         }
 
     }

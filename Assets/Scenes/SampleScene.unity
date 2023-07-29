@@ -401,6 +401,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   GridCoordinates: {x: 0, y: 0}
+  InnerHexColor: {r: 0, g: 0, b: 0, a: 0}
+  OuterHexColor: {r: 0, g: 0, b: 0, a: 0}
   InnerHexIsHighlighted: 0
   OuterHexIsHighlighted: 0
 --- !u!64 &761220339
@@ -626,33 +628,25 @@ MonoBehaviour:
   hexPrefab: {fileID: 761220338}
   hexParent: {fileID: 2091030831}
   Texutures:
-  - {fileID: 2800000, guid: b14c4799c9487dc42a880da5a7c5892a, type: 3}
-  - {fileID: 2800000, guid: 9c4040e552b4ecf4c80b8f1c96d2aca2, type: 3}
-  - {fileID: 2800000, guid: f8af072333a7c6e49a1a1de5d106e5c4, type: 3}
-  - {fileID: 2800000, guid: daa033572df9d20419e6c927ff2c2c91, type: 3}
-  - {fileID: 2800000, guid: 37523e5dd9dadd64d95c93dbdaf265ef, type: 3}
-  - {fileID: 2800000, guid: 2d369e16f5f84a04c83c22731a20390f, type: 3}
-  - {fileID: 2800000, guid: aa3e95facbcb2874ea5d0fa0ce8ab8f2, type: 3}
-  - {fileID: 2800000, guid: 6d7c872c3a1aea8448fd8eb308df97f3, type: 3}
-  - {fileID: 2800000, guid: 8931af16587629c4187693a56cd9de54, type: 3}
-  - {fileID: 2800000, guid: aeba06a561ff961458da37a0a69eea0c, type: 3}
-  - {fileID: 2800000, guid: 87371d6475acff34aaf1fd4596845388, type: 3}
-  - {fileID: 2800000, guid: 94ddededa5cbf2242b63ddd549cfba38, type: 3}
-  - {fileID: 2800000, guid: e750983d767f3e546a43fc035a7d2d6d, type: 3}
-  - {fileID: 2800000, guid: 4afc1765a23e31b4d91c3c7223087506, type: 3}
-  - {fileID: 2800000, guid: 04c0fe5e0cf253a48a1fbf82b9666e96, type: 3}
-  - {fileID: 2800000, guid: 8673ac5a196c5e7429bd829afd0092a8, type: 3}
-  - {fileID: 2800000, guid: 2f11c4bf57fe64b4f859276390ae902d, type: 3}
-  - {fileID: 2800000, guid: 14f529fbbf88335498841aefa9baf5bc, type: 3}
-  - {fileID: 2800000, guid: e3ca3f1466bc02b4692c4d3673d16df5, type: 3}
-  - {fileID: 2800000, guid: 07eba06918980414fac775f3dc6fcc35, type: 3}
-  - {fileID: 2800000, guid: 57d96d9d393c75743b9207eddd2e69b1, type: 3}
-  - {fileID: 2800000, guid: 7332c22810418e940a28b569ff493cf2, type: 3}
-  - {fileID: 2800000, guid: 8935825f0cada30479d8d7fdf4de5808, type: 3}
-  - {fileID: 2800000, guid: f127ee87898056e47946fab0b9123fc9, type: 3}
-  - {fileID: 2800000, guid: 77f420355d0afa849827304d8e765818, type: 3}
-  - {fileID: 2800000, guid: ef520d91c394e83498031f05027a96fa, type: 3}
-  - {fileID: 2800000, guid: baf23df249cc3974fafd9a18167df712, type: 3}
+  - {fileID: 2800000, guid: 93c63f62e88a872409921df7acdb5a2c, type: 3}
+  - {fileID: 2800000, guid: f7e09274236a49c4ba205de0738a1886, type: 3}
+  - {fileID: 2800000, guid: dd33316c57fc4bc448dfc298b113a4f0, type: 3}
+  - {fileID: 2800000, guid: 0007e64d18d7db14c8e3543c4861e608, type: 3}
+  - {fileID: 2800000, guid: c001fc0c195f3974fb817b2f995d54c9, type: 3}
+  - {fileID: 2800000, guid: 55a38b21135b1944eb3cd4020b8a3b44, type: 3}
+  - {fileID: 2800000, guid: 179e0c2aaf5171543a52e98d8e15360f, type: 3}
+  - {fileID: 2800000, guid: 59e11b4d76877334080d7b2dfec3f51b, type: 3}
+  - {fileID: 2800000, guid: 6b8935af058f8974c8ce153894c01472, type: 3}
+  - {fileID: 2800000, guid: 8db2f4c31f3614741afc75520919d060, type: 3}
+  - {fileID: 2800000, guid: 48bc4a92dccd51241a882a9f682bfb76, type: 3}
+  - {fileID: 2800000, guid: 84f91327d1aea424896931c311a638bc, type: 3}
+  - {fileID: 2800000, guid: 29bb65d122b2c794bb3cdcc3c9da019e, type: 3}
+  - {fileID: 2800000, guid: 5fc895f5044dd9f46a5ec9e4725cf3a2, type: 3}
+  - {fileID: 2800000, guid: 54bf3e6ccedae7240b18a94f97d4b2f6, type: 3}
+  - {fileID: 2800000, guid: 90fc01534d944d74f9d77554559ce7d8, type: 3}
+  - {fileID: 2800000, guid: 076fa9785d5e5374990495e8fa7f052e, type: 3}
+  - {fileID: 2800000, guid: 1294c03d8a368554486b73ee57230068, type: 3}
+  hexDisplay: 1
 --- !u!4 &1605946131
 Transform:
   m_ObjectHideFlags: 0
@@ -683,7 +677,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MainPlanet:
-    PlanetSize: {x: 5, y: 5}
+    PlanetSize: {x: 50, y: 50}
     InitialSunRayFocus: {x: 10, y: 10}
     SunlightVector: {x: 0, y: 0}
     SunlightIntensity: 1
@@ -692,27 +686,38 @@ MonoBehaviour:
     currentDay: 0
     Biomes:
     - Biome: 0
-      BiomeColor: {r: 0.5159802, g: 0.99060154, b: 0.09119853, a: 1}
+      Color: {r: 0.745283, g: 0.6995817, b: 0.6995817, a: 1}
+      Texture: {fileID: 2800000, guid: 4877bd42593aeb94fa7eb3794596f09c, type: 3}
     - Biome: 1
-      BiomeColor: {r: 0.5038379, g: 0.9367261, b: 0.17519684, a: 1}
+      Color: {r: 0.3383632, g: 0.41509432, b: 0.28390884, a: 1}
+      Texture: {fileID: 2800000, guid: 8db2f4c31f3614741afc75520919d060, type: 3}
     - Biome: 2
-      BiomeColor: {r: 0.31149176, g: 0.397389, b: 0.12746662, a: 1}
+      Color: {r: 0, g: 0, b: 0, a: 0}
+      Texture: {fileID: 0}
     - Biome: 3
-      BiomeColor: {r: 0.9579326, g: 0.83664495, b: 0.8448906, a: 1}
+      Color: {r: 0.1802243, g: 0.8490566, b: 0.18936403, a: 1}
+      Texture: {fileID: 2800000, guid: c001fc0c195f3974fb817b2f995d54c9, type: 3}
     - Biome: 4
-      BiomeColor: {r: 0.19234511, g: 0.14910477, b: 0.23995987, a: 1}
+      Color: {r: 0, g: 1, b: 0.010393143, a: 1}
+      Texture: {fileID: 2800000, guid: 6b8935af058f8974c8ce153894c01472, type: 3}
     - Biome: 5
-      BiomeColor: {r: 0.79527366, g: 0.52784014, b: 0.23448259, a: 1}
+      Color: {r: 0.43919545, g: 0.4716981, b: 0.3270737, a: 1}
+      Texture: {fileID: 2800000, guid: 56a473fadea25fd449d66fdf1e2c913d, type: 3}
     - Biome: 6
-      BiomeColor: {r: 0.24012043, g: 0.4072457, b: 0.20529859, a: 1}
+      Color: {r: 0.56428504, g: 0.8773585, b: 0.40970984, a: 1}
+      Texture: {fileID: 2800000, guid: 55a38b21135b1944eb3cd4020b8a3b44, type: 3}
     - Biome: 7
-      BiomeColor: {r: 0.5148686, g: 0.37834674, b: 0.6078084, a: 1}
+      Color: {r: 0.8396226, g: 0.5210739, b: 0.17030083, a: 1}
+      Texture: {fileID: 2800000, guid: 076fa9785d5e5374990495e8fa7f052e, type: 3}
     - Biome: 8
-      BiomeColor: {r: 0.04228745, g: 0.2450557, b: 0.11561356, a: 1}
+      Color: {r: 0.29826617, g: 0.6226415, b: 0.1321645, a: 1}
+      Texture: {fileID: 2800000, guid: 59e11b4d76877334080d7b2dfec3f51b, type: 3}
     - Biome: 9
-      BiomeColor: {r: 0.6553508, g: 0.759986, b: 0.91452813, a: 1}
+      Color: {r: 0.9056604, g: 0.8843005, b: 0.8843005, a: 1}
+      Texture: {fileID: 2800000, guid: e6f3800475edab14899c1883800ea870, type: 3}
     - Biome: 10
-      BiomeColor: {r: 0.2932279, g: 0.78101665, b: 0.8753867, a: 1}
+      Color: {r: 0.8773585, g: 0.7137639, b: 0.25244746, a: 1}
+      Texture: {fileID: 2800000, guid: 1633b4d8b5a60ea489902c3467f982ba, type: 3}
   CircularSun: 0
   VerticalSun: 0
   planetFractal: 1
