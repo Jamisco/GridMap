@@ -26,6 +26,8 @@ namespace Assets.Scripts.WorldMap
 
         Dictionary<Axial, HexTile> HexTiles;
 
+        public List<Texture2D> Texutures;
+
         private void Awake()
         {
             HexTiles = new Dictionary<Axial, HexTile>();
@@ -69,6 +71,8 @@ namespace Assets.Scripts.WorldMap
             {
                 hexTile.CreateSlopeMesh();
 
+                //hexTile.SetTexture(RandomTextures());
+
                 hexTile.DrawMesh();
             }
 
@@ -78,6 +82,11 @@ namespace Assets.Scripts.WorldMap
             string formattedTime = $"{ts:mm\\m\\ ss\\s\\ fff\\m\\s}";
 
             Debug.Log(formattedTime);
+        }
+
+        private Texture2D RandomTextures()
+        {
+            return Texutures[UnityEngine.Random.Range(0, Texutures.Count)];
         }
 
         private void ComputePlanetNoise()
@@ -131,7 +140,6 @@ namespace Assets.Scripts.WorldMap
                 }
             }
         }
-
         public HexTile GetHexTile(Axial coordinates)
         {
             HexTile hex = null;
@@ -139,7 +147,6 @@ namespace Assets.Scripts.WorldMap
 
             return hex;
         }
-
         private void DestroyAllChildren()
         {
             int childCount = hexParent.transform.childCount;

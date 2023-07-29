@@ -228,7 +228,6 @@ namespace Assets.Scripts.WorldMap
 
             return position;
         }
-
         /// <summary>
         /// Creates the four triangles that fill up a hexagon.
         /// Used for mesh creation
@@ -282,9 +281,14 @@ namespace Assets.Scripts.WorldMap
             SlopeColors = new List<Color>(4);
 
             mesh = GetComponent<MeshFilter>().mesh;
-            meshCollider = GetComponent<MeshCollider>();
+            meshCollider = GetComponent<MeshCollider>();            
+        }
 
-            
+        public void SetTexture(Texture2D texture)
+        {
+            Renderer ren = GetComponent<Renderer>();
+
+            ren.material.SetTexture("_MainTex", texture);
         }
 
         public void Initialize(GridManager Grid, int x, int z)
@@ -317,8 +321,9 @@ namespace Assets.Scripts.WorldMap
             }
 
             // create random color
+            InnerColor = UnityEngine.Random.ColorHSV();
 
-            AddColors(hexSettings.InnerHexColor);
+            AddInnerColors(InnerColor);
 
             CreateOuterHexMesh();
         }
@@ -338,16 +343,7 @@ namespace Assets.Scripts.WorldMap
                 Triangles.AddRange(SetOuterTriangles(i + 6));
             }
 
-            AddColors(hexSettings.InnerHexColor);
-        }
-
-        private Vector3 InnerHexDiff()
-        {
-            float length = Mathf.Abs(Vector3.Distance(Vertices[0], Vertices[6]));
-
-            float shift = length / Mathf.Sqrt(2);
-
-            return new Vector3(shift, 0, shift);
+            AddInnerColors(hexSettings.InnerHexColor);
         }
 
         public void CreateSlopeMesh()
@@ -423,7 +419,7 @@ namespace Assets.Scripts.WorldMap
                 Vector3 IPos35 = Vector3.positiveInfinity;
                 Vector3 IPos3 = Vector3.positiveInfinity;
 
-                if (hex2 != null && (i == 0 || i == 1))
+                if (hex2 != null && (i == 0 || i == 1) && true)
                 {
                     IPos35 = StepOuterVertexPosition(i) * 2 + pos2;
 
@@ -433,49 +429,63 @@ namespace Assets.Scripts.WorldMap
                     IPos35.y -= (Position.y - hex1.Position.y);
                     IPos3.y -= (Position.y - hex2.Position.y);
 
-                    SlopeVertices.Add(IPos35); // sv + 4
-                    SlopeVertices.Add(IPos3); // sv + 5
+                    SlopeVertices.Add(pos2); // sv + 4
+                    SlopeVertices.Add(IPos35); // sv + 5
+                    SlopeVertices.Add(IPos3); // sv + 6
 
                     SlopeTriangles.AddRange(new int[3] {
-                                sv + 1, sv + 4, sv + 5,
+                                sv + 4, sv + 5, sv + 6,
                             });
 
-                    SlopeColors.Add(hexSettings.OuterHexColor);
-                    SlopeColors.Add(hexSettings.OuterHexColor);
+                    SlopeColors.Add(InnerColor);
+                    SlopeColors.Add(hex1.InnerColor);
+                    SlopeColors.Add(hex2.InnerColor);
 
                 }
             }
         }
 
-        /// <summary>
-        /// Checks if the given hex1 is the highest of all its surrounding hexes
-        /// </summary>
-        /// <param name="hex"></param>
-        /// <returns></returns>
-        public bool IsHighest()
-        {
-            List<HexTile> surroundingHex = GetSurroundingHexes();
+        private Color InnerColor;
 
-            foreach (HexTile hex in surroundingHex)
+        public Color MergeColors(Color color1, Color color2, Color color3)
+        {
+            // Calculate the average RGB components of the three colors
+            float averageRed = (color1.r + color2.r + color3.r) / 3f;
+            float averageGreen = (color1.g + color2.g + color3.g) / 3f;
+            float averageBlue = (color1.b + color2.b + color3.b) / 3f;
+
+            // Create and return the merged color
+            Color mergedColor = new Color(averageRed, averageGreen, averageBlue);
+            return mergedColor;
+        }
+
+
+
+        public Texture2D AddWatermark(Texture2D background, Texture2D watermark, Texture2D third)
+        {
+
+            int startX = 0;
+            int startY = background.height - watermark.height;
+
+            for (int x = startX; x < background.width; x++)
             {
-                if (hex == null)
-                {
-                    continue;
-                }
 
-                if (Position.y < hex.Position.y)
+                for (int y = startY; y < background.height; y++)
                 {
-                    return false;
+                    Color bgColor = background.GetPixel(x, y);
+                    Color wmColor = watermark.GetPixel(x - startX, y - startY);
+
+                    Color final_color = Color.Lerp(bgColor, wmColor, wmColor.a / 1.0f);
+
+                    background.SetPixel(x, y, final_color);
                 }
             }
 
-            return true;
+            background.Apply();
+
+            return background;
         }
 
-        private void AddSlopeColors()
-        {
-
-        }
 
         public void RefreshMesh()
         {
@@ -495,26 +505,6 @@ namespace Assets.Scripts.WorldMap
             }
 
             return surroundingHexs;
-        }
-
-        /// <summary>
-        /// Will return the position of a corner in the inner hex1
-        /// </summary>
-        /// <param name="index">Input a range from 0 - 5 denoting the i </param>
-        /// <returns></returns>
-        public Vector3 GetInnerVertexPosition(int index)
-        {
-            return Vertices[index];
-        }
-
-        /// <summary>
-        /// Will return the position of a corner in the outer hex1
-        /// </summary>
-        /// <param name="index">Input a range from 0 - 5 denoting the i </param>
-        /// <returns></returns>
-        public Vector3 GetOuterCornerPosition(int index)
-        {
-            return Vertices[index + 6];
         }
 
         public void DrawMesh(Vector3 position = default)
@@ -543,21 +533,21 @@ namespace Assets.Scripts.WorldMap
             mesh.uv = uv;
         }
 
-
-        public float mul = .1f;
+        /// higher values better the smaller the mapping wll be
+        private float mul = 3;
         private Vector2 GetHexUV(Vector3 vertexPosition)
         {
             // Assuming hexagons are uniformly spaced in a Grid along the Z-axis
             // Calculate the relative position of the vertex within the hexagon
             float relativeX = vertexPosition.x / hexSettings.innerRadius;
-            float relativeY = vertexPosition.y / (hexSettings.outerRadius - hexSettings.innerRadius);
-            float relativeZ = vertexPosition.z / (0.5f * hexSettings.outerRadius);
+            float relativeY = vertexPosition.y / (Position.y + hexSettings.outerRadius - hexSettings.innerRadius);
+            float relativeZ = vertexPosition.z / (hexSettings.outerRadius);
 
             // Calculate UV coordinates based on the relative position
             // Using a custom range for UV coordinates based on the hexagon dimensions
-            float uvX = 0.5f + (0.25f * relativeX);
-            float uvY = 0.5f + (0.25f * relativeY);
-            float uvZ = 0.5f + (0.25f * relativeZ);
+            float uvX = (mul * relativeX);
+            float uvY = (mul * relativeY);
+            float uvZ = (mul * relativeZ);
 
             if(vertexPosition.y == Position.y)
             {
@@ -591,11 +581,6 @@ namespace Assets.Scripts.WorldMap
             return combinedColors;
         }
 
-        public void DeleteHex()
-        {
-            Destroy(gameObject);
-        }
-
         public bool InnerHexIsHighlighted = false;
         public bool OuterHexIsHighlighted = false;
         public void ToggleInnerHighlight()
@@ -618,7 +603,6 @@ namespace Assets.Scripts.WorldMap
             mesh.RecalculateNormals();
 
         }
-
         public void ToggleOuterHighlight()
         {
             Color hColor = hexSettings.OuterHighlightColor;
@@ -638,8 +622,7 @@ namespace Assets.Scripts.WorldMap
 
             OuterHexIsHighlighted = !OuterHexIsHighlighted;
         }
-
-        private void AddColors(Color color)
+        private void AddInnerColors(Color color)
         {
             colors.Add(color);
             colors.Add(color);
