@@ -320,10 +320,7 @@ namespace Assets.Scripts.WorldMap
                 Vertices.Add(InnerVertexPosition(i));
             }
 
-            // create random color
-            InnerColor = UnityEngine.Random.ColorHSV();
-
-            AddInnerColors(InnerColor);
+            AddInnerColors(hexSettings.InnerHexColor);
 
             CreateOuterHexMesh();
         }
@@ -416,38 +413,47 @@ namespace Assets.Scripts.WorldMap
 
                 HexTile hex2 = surroundingHex[nextSide];
 
-                Vector3 IPos35 = Vector3.positiveInfinity;
+                Vector3 center = Vector3.positiveInfinity;
                 Vector3 IPos3 = Vector3.positiveInfinity;
 
-                if (hex2 != null && (i == 0 || i == 1) && true)
+                if (hex2 != null)
                 {
-                    IPos35 = StepOuterVertexPosition(i) * 2 + pos2;
+                    // hex2 connecting vertex
+                    IPos3 = StepOuterVertexPosition(nextSide) + Vertices[p2];
+                    IPos3.y -= (Position.y - hex2.Position.y) / 2;
 
-                    // if the hex has 2 adjacent slopes, we link them together
-                    IPos3 = StepOuterVertexPosition(nextSide) * 2 + pos2;
+                    Vector3 hex1Corner, hex2Corner;
 
-                    IPos35.y -= (Position.y - hex1.Position.y);
-                    IPos3.y -= (Position.y - hex2.Position.y);
+                    // the corners of the surrounding hex, so we can get their centers
+                    hex1Corner = StepOuterVertexPosition(i) * 2 + pos2;
+                    hex2Corner = StepOuterVertexPosition(nextSide) * 2 + pos2;
 
-                    SlopeVertices.Add(pos2); // sv + 4
-                    SlopeVertices.Add(IPos35); // sv + 5
-                    SlopeVertices.Add(IPos3); // sv + 6
+                    hex1Corner.y -= (Position.y - hex1.Position.y);
+                    hex2Corner.y -= (Position.y - hex2.Position.y);
 
-                    SlopeTriangles.AddRange(new int[3] {
-                                sv + 4, sv + 5, sv + 6,
-                            });
+                    center = GetTriangleCenter(pos2, hex1Corner, hex2Corner);
 
-                    SlopeColors.Add(InnerColor);
-                    SlopeColors.Add(hex1.InnerColor);
-                    SlopeColors.Add(hex2.InnerColor);
+                    // sv + 1 = pos2 (current hex 2 vertex for slope)
+                    // sv + 3 = pos4 (current hex last slope vertex)
 
-                    //s
+                    SlopeVertices.Add(IPos3); // sv + 4
+                    SlopeVertices.Add(center); // sv + 5
 
+                    SlopeTriangles.AddRange(new int[6] {
+                        sv + 1, sv + 3, sv + 4,
+                        sv + 3, sv + 5, sv + 4
+                    });
+
+                    SlopeColors.Add(hexSettings.OuterHexColor);
+                    SlopeColors.Add(hexSettings.OuterHexColor);
+                }
+
+                Vector3 GetTriangleCenter(Vector3 pos1, Vector3 pos2, Vector3 pos3)
+                {
+                    return (pos1 + pos2 + pos3) / 3f;
                 }
             }
         }
-
-        private Color InnerColor;
 
         public Color MergeColors(Color color1, Color color2, Color color3)
         {
@@ -550,11 +556,6 @@ namespace Assets.Scripts.WorldMap
             float uvX = (mul * relativeX);
             float uvY = (mul * relativeY);
             float uvZ = (mul * relativeZ);
-
-            if(vertexPosition.y == Position.y)
-            {
-                return new Vector2(uvX, uvZ);
-            }
 
             // Return the UV coordinate
             return new Vector2(uvX, uvZ);

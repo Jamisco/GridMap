@@ -401,6 +401,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   GridCoordinates: {x: 0, y: 0}
+  InnerHexIsHighlighted: 0
+  OuterHexIsHighlighted: 0
 --- !u!64 &761220339
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -623,6 +625,34 @@ MonoBehaviour:
   HexSettings: {fileID: 11400000, guid: c966756f1912d5a45a766bb5fef9cf23, type: 2}
   hexPrefab: {fileID: 761220338}
   hexParent: {fileID: 2091030831}
+  Texutures:
+  - {fileID: 2800000, guid: b14c4799c9487dc42a880da5a7c5892a, type: 3}
+  - {fileID: 2800000, guid: 9c4040e552b4ecf4c80b8f1c96d2aca2, type: 3}
+  - {fileID: 2800000, guid: f8af072333a7c6e49a1a1de5d106e5c4, type: 3}
+  - {fileID: 2800000, guid: daa033572df9d20419e6c927ff2c2c91, type: 3}
+  - {fileID: 2800000, guid: 37523e5dd9dadd64d95c93dbdaf265ef, type: 3}
+  - {fileID: 2800000, guid: 2d369e16f5f84a04c83c22731a20390f, type: 3}
+  - {fileID: 2800000, guid: aa3e95facbcb2874ea5d0fa0ce8ab8f2, type: 3}
+  - {fileID: 2800000, guid: 6d7c872c3a1aea8448fd8eb308df97f3, type: 3}
+  - {fileID: 2800000, guid: 8931af16587629c4187693a56cd9de54, type: 3}
+  - {fileID: 2800000, guid: aeba06a561ff961458da37a0a69eea0c, type: 3}
+  - {fileID: 2800000, guid: 87371d6475acff34aaf1fd4596845388, type: 3}
+  - {fileID: 2800000, guid: 94ddededa5cbf2242b63ddd549cfba38, type: 3}
+  - {fileID: 2800000, guid: e750983d767f3e546a43fc035a7d2d6d, type: 3}
+  - {fileID: 2800000, guid: 4afc1765a23e31b4d91c3c7223087506, type: 3}
+  - {fileID: 2800000, guid: 04c0fe5e0cf253a48a1fbf82b9666e96, type: 3}
+  - {fileID: 2800000, guid: 8673ac5a196c5e7429bd829afd0092a8, type: 3}
+  - {fileID: 2800000, guid: 2f11c4bf57fe64b4f859276390ae902d, type: 3}
+  - {fileID: 2800000, guid: 14f529fbbf88335498841aefa9baf5bc, type: 3}
+  - {fileID: 2800000, guid: e3ca3f1466bc02b4692c4d3673d16df5, type: 3}
+  - {fileID: 2800000, guid: 07eba06918980414fac775f3dc6fcc35, type: 3}
+  - {fileID: 2800000, guid: 57d96d9d393c75743b9207eddd2e69b1, type: 3}
+  - {fileID: 2800000, guid: 7332c22810418e940a28b569ff493cf2, type: 3}
+  - {fileID: 2800000, guid: 8935825f0cada30479d8d7fdf4de5808, type: 3}
+  - {fileID: 2800000, guid: f127ee87898056e47946fab0b9123fc9, type: 3}
+  - {fileID: 2800000, guid: 77f420355d0afa849827304d8e765818, type: 3}
+  - {fileID: 2800000, guid: ef520d91c394e83498031f05027a96fa, type: 3}
+  - {fileID: 2800000, guid: baf23df249cc3974fafd9a18167df712, type: 3}
 --- !u!4 &1605946131
 Transform:
   m_ObjectHideFlags: 0

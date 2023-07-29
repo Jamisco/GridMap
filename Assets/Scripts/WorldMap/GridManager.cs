@@ -34,11 +34,6 @@ namespace Assets.Scripts.WorldMap
 
             HexTile.hexSettings = HexSettings;
 
-
-            //HexTile.outerRadius = outerRadius;
-            //HexTile.innerRadius = innerRadius;
-            //HexTile.stepDistance = stepDistance;
-
             GenerateGrid();
         }
 
@@ -71,7 +66,7 @@ namespace Assets.Scripts.WorldMap
             {
                 hexTile.CreateSlopeMesh();
 
-                //hexTile.SetTexture(RandomTextures());
+                hexTile.SetTexture(RandomTextures());
 
                 hexTile.DrawMesh();
             }
