@@ -27,7 +27,11 @@ namespace Assets.Scripts.WorldMap
         /// The corners of the hex tile. Starting from the top center corner and going clockwise
         /// </summary>
         [NonSerialized] public Vector3[] VertexCorners;
-        
+
+        private void Awake()
+        {
+            OnValidate();
+        }
         private void OnValidate()
         {
             innerRadius = outerRadius * 0.866025404f;
@@ -44,6 +48,8 @@ namespace Assets.Scripts.WorldMap
             };
         }
 
+#if UNITY_EDITOR
+
         [MenuItem("Assets/Hex Settings")]
         public static void CreateMyAsset()
         {
@@ -56,5 +62,7 @@ namespace Assets.Scripts.WorldMap
 
             Selection.activeObject = asset;
         }
+#endif
     }
+
 }

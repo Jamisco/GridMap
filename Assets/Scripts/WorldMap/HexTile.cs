@@ -5,9 +5,6 @@ using Roytazz.HexMesh;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Tilemaps;
-using UnityEngine.UIElements;
-using static UnityEditor.Searcher.SearcherWindow.Alignment;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -282,7 +279,9 @@ namespace Assets.Scripts.WorldMap
             SlopeTriangles = new List<int>(6);
 
             mesh = GetComponent<MeshFilter>().mesh;
-            meshCollider = GetComponent<MeshCollider>();            
+            meshCollider = GetComponent<MeshCollider>();   
+            
+            propertyBlock = new MaterialPropertyBlock();
         }
 
         public void SetColors(Color aColor, bool drawAfter = false)
@@ -304,11 +303,19 @@ namespace Assets.Scripts.WorldMap
                 DrawMesh();
             }
         }
+
+        private MaterialPropertyBlock propertyBlock;
         public void SetTexture(Texture2D texture)
         {
             Renderer ren = GetComponent<Renderer>();
 
-            ren.material.SetTexture("_MainTex", texture);
+            propertyBlock.SetTexture("_MainTex", texture);
+            ren.SetPropertyBlock(propertyBlock);
+
+            //Material test = ren.sharedMaterial;
+
+            //ren.material.SetTexture("_MainTex", texture);
+           // ren.sharedMaterial.SetTexture("_MainTex", texture);
         }
 
         public void Initialize(GridManager Grid, int x, int z)
@@ -339,6 +346,8 @@ namespace Assets.Scripts.WorldMap
             {
                 Vertices.Add(InnerVertexPosition(i));
             }
+
+            mesh.UploadMeshData(false);
 
             CreateOuterHexMesh();
         }
@@ -505,14 +514,13 @@ namespace Assets.Scripts.WorldMap
 
             return surroundingHexs;
         }
-
         public void DrawMesh(Vector3 position = default)
         {
             mesh.vertices = CombineVertices().ToArray();
             mesh.triangles = CombineTriangles().ToArray();
             meshCollider.sharedMesh = mesh;
-            mesh.colors = VertexColors.ToArray();
 
+            // mesh.colors = VertexColors.ToArray();          
             SetHexMeshUVs();
             mesh.RecalculateNormals();
 
@@ -578,7 +586,12 @@ namespace Assets.Scripts.WorldMap
             {
                 hColor = InnerHexColor;
             }
-  
+
+            if(VertexColors.Count == 0)
+            {
+                SetColors(Color.white);
+            }
+
             for (int i = 0; i < 6; i++)
             {
                 VertexColors[i] = hColor;
@@ -589,6 +602,8 @@ namespace Assets.Scripts.WorldMap
             mesh.colors = VertexColors.ToArray();
             mesh.RecalculateNormals();
 
+            
+
         }
         public void ToggleOuterHighlight()
         {
@@ -597,6 +612,11 @@ namespace Assets.Scripts.WorldMap
             if (OuterHexIsHighlighted)
             {
                 hColor = OuterHexColor;
+            }
+
+            if (VertexColors.Count == 0)
+            {
+                SetColors(Color.white);
             }
 
             for (int i = 6; i < 12; i++)

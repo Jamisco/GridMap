@@ -21,7 +21,6 @@
             
             #include "UnityCG.cginc"
             
-            #pragma enable_d3d11_debug_symbols
             #pragma vertex vert
             #pragma fragment frag
        
@@ -68,7 +67,7 @@
 
                 col *= i.color * _Color;
                 
-                float ay = (_HeightColor.y - _HeightColor.x) * ((i.y - _HeightRange.x) / (_HeightRange.y - _HeightRange.x)) + _HeightColor.x;
+                fixed4 ay = (_HeightColor.y - _HeightColor.x) * ((i.y - _HeightRange.x) / (_HeightRange.y - _HeightRange.x)) + _HeightColor.x;
                 
                 col *= ay;
                 return col;
