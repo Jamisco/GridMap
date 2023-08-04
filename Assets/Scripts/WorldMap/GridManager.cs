@@ -12,6 +12,8 @@ using UnityEditor;
 using static Assets.Scripts.Miscellaneous.HexFunctions;
 using Axial = Assets.Scripts.WorldMap.HexTile.Axial;
 using System.Linq;
+using UnityEngine.Rendering;
+using UnityEditor.ShaderGraph.Legacy;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -36,26 +38,48 @@ namespace Assets.Scripts.WorldMap
 
         public enum HexDisplay { Color, Texture}
 
-       
+        public bool useChunks = false;
+
         private void Awake()
         {
             HexTiles = new Dictionary<Axial, HexTile>();
 
             hexChunks = new List<HexChunk>();
 
+            hexPrefab = GetComponentInChildren<HexTile>();
+            
+            hex = Instantiate(hexPrefab, hexParent.transform);
+
+            rp = new RenderParams(material);
+
             HexTile.hexSettings = HexSettings;
 
-            GenerateGrid();
+            if(useGpu)
+            {
+                createmesh();
+                GenerateGridInstance();
+            }
+            else
+            {
+                GenerateGrid();
+            }
         }
 
+        public bool useGpu;
+
         Stopwatch timer = new Stopwatch();
+
+        public Material material;
+
+        struct InstanceData
+        {
+            public Matrix4x4 objectToWorld;
+        };
         public void GenerateGrid()
         {
-            CreateHexChunks();
-            
+            DestroyChildren();
             hexPrefab = GetComponentInChildren<HexTile>();
             HexTiles.Clear();
-            //DestroyAllChildren();
 
             ComputePlanetNoise();
 
@@ -67,12 +91,15 @@ namespace Assets.Scripts.WorldMap
             {
                 for (int z = 0; z < planetGenerator.PlanetSize.y; z++)
                 {
-                    hex = Instantiate(hexPrefab);
-                    
-                    HexChunk hc = GetHexChunk(x, z);
-                    
-                    hc.AddHex(hex);
-
+                    if (useChunks)
+                    {
+                        hex = Instantiate(hexPrefab);
+                    }
+                    else
+                    {
+                        hex = Instantiate(hexPrefab, hexParent.transform);
+                    }
+                   
                     hex.Initialize(this, x, z);
 
                     HexTiles.Add(hex.AxialCoordinates, hex);
@@ -97,12 +124,13 @@ namespace Assets.Scripts.WorldMap
 
                     hexTile.SetTexture(texture);
                 }
+                
                 hexTile.DrawMesh();
             }
 
-            foreach (HexChunk chunk in hexChunks)
+            if (useChunks)
             {
-                chunk.DrawChunk();
+                UseChunks();
             }
 
             timer.Stop();
@@ -113,12 +141,166 @@ namespace Assets.Scripts.WorldMap
             Debug.Log(formattedTime);
         }
 
+        public void ChooseGrid()
+        {
+            if (useGpu)
+            {
+                ready = false;
+                createmesh();
+                GenerateGridInstance();
+            }
+            else
+            {              
+                GenerateGrid();
+            }
+        }
+
+        RenderParams rp;
+        List<InstanceData> IDatas;
+        List<Matrix4x4> IMatrixs;
+        HexTile hex;
+
+        bool ready = false;
+        public void GenerateGridInstance()
+        {
+            HexTiles.Clear();
+            
+            IDatas = new List<InstanceData>();
+            IMatrixs = new List<Matrix4x4>();
+
+            timer.Start();
+
+            for (int x = 0; x < planetGenerator.PlanetSize.x; x++)
+            {
+                for (int z = 0; z < planetGenerator.PlanetSize.y; z++)
+                {
+                    InstanceData data;
+
+                    data.objectToWorld = Matrix4x4.Translate(GetPosition(x, z));
+
+                    IDatas.Add(data);
+                    IMatrixs.Add(data.objectToWorld);
+                }
+            }
+
+            splitList();
+            ready = true;
+            
+            timer.Stop();
+            TimeSpan ts = timer.Elapsed;
+
+            string formattedTime = $"{ts:mm\\m\\ ss\\s\\ fff\\m\\s}";
+
+           // Debug.Log(formattedTime);
+        }
+
+        List<List<InstanceData>> allIdata = new List<List<InstanceData>>();
+        List<List<Matrix4x4>> allMatrix = new List<List<Matrix4x4>>();
+        
+        InstanceData[][] allIdataArray;
+        Matrix4x4[][] allMatrixArray;
+
+        void splitList()
+        {
+            allIdata.Clear();
+            allMatrix.Clear();
+           
+
+            int chunkSize = 1023;
+
+            int chunkCount = Mathf.CeilToInt(IDatas.Count / (float)chunkSize);
+
+            for (int i = 0; i < chunkCount; i++)
+            {
+                allIdata.Add(IDatas.GetRange(i * chunkSize, Mathf.Min(chunkSize, IDatas.Count - (i * chunkSize))));
+
+                allMatrix.Add(IMatrixs.GetRange(i * chunkSize, Mathf.Min(chunkSize, IMatrixs.Count - (i * chunkSize))));
+
+            }
+
+            Debug.Log("IData size: " + allIdata.Count);
+            Debug.Log("AllMatrix size: " + allMatrix.Count);
+
+            allIdataArray = allIdata.Select(a => a.ToArray()).ToArray();
+            allMatrixArray = allMatrix.Select(a => a.ToArray()).ToArray();
+        }
+
+            
+        void createmesh()
+        {
+            hex.Initialize(this, 0, 0);
+
+           // HexTiles.Add(hex.AxialCoordinates, hex);
+
+           // hex.SetVector();
+
+            hex.CreateMesh();
+
+            hex.DrawMesh();
+        }
+
+        bool spanned = false;
+
+        private Matrix4x4[] matrices; // Array to store transformation matrices
+        void tester()
+        {
+            int instanceCount = 10;
+            
+            matrices = new Matrix4x4[instanceCount];
+
+            for (int i = 0; i < instanceCount; ++i)
+            {
+                matrices[i] = Matrix4x4.Translate(new Vector3(5 + i, 0.0f, 5.0f));
+            }
+        }
+
+        public Mesh aMesh;
+        private void Update()
+        {
+            if(useGpu && ready)
+            {
+                //Span<Matrix4x4[]> spanData = allMatrixArray.AsSpan();
+
+                //for (int i = 0; i < spanData.Length; i++)
+                //{
+                //    Graphics.DrawMeshInstanced(hex.HexMesh, 0, material, spanData[i]);
+                //}
+
+                Span<InstanceData[]> spanData = allIdataArray.AsSpan();
+                for (int i = 0; i < spanData.Length; i++)
+                {
+                    Graphics.RenderMeshInstanced(rp, aMesh, 0, spanData[i]);
+                }
+            }
+
+            // ComputePlanetNoise();
+            // Check4Click();
+        }
+
+        public void UseChunks()
+        {
+            CreateHexChunks();
+
+            foreach (HexTile hexTile in HexTiles.Values)
+            {
+                HexChunk hc = GetHexChunk(hexTile.GridCoordinates.x, hexTile.GridCoordinates.y);
+
+                hc.AddHex(hexTile);
+            }
+
+            foreach (HexChunk chunk in hexChunks)
+            {
+                chunk.DrawChunk();
+            }
+
+        }
+
         public int ChunkSizeX, ChunkSizeZ;
         private void CreateHexChunks()
         {
             // create the appropriate ammount of chunks to cover the whole map
 
-            DestroyChunks();
+            DestroyChildren();
 
             hexChunks.Clear();
 
@@ -161,11 +343,6 @@ namespace Assets.Scripts.WorldMap
         {
             planetGenerator.SetComputeSize();
             planetGenerator.ComputeBiomeNoise();
-        }
-        private void Update()
-        {
-           // ComputePlanetNoise();
-            Check4Click();
         }
 
         public void Check4Click()
@@ -216,7 +393,7 @@ namespace Assets.Scripts.WorldMap
 
             return hex;
         }
-        private void DestroyChunks()
+        private void DestroyChildren()
         {
             int childCount = hexParent.transform.childCount;
 
@@ -228,6 +405,8 @@ namespace Assets.Scripts.WorldMap
                 // DestroyImmediate(child.gameObject);
             }
         }
+
+
     }
 
 #if UNITY_EDITOR
@@ -242,7 +421,7 @@ namespace Assets.Scripts.WorldMap
 
             if (GUILayout.Button("Generate Grid"))
             {
-                exampleScript.GenerateGrid();
+                exampleScript.ChooseGrid();
             }
         }
     }

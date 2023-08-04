@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Roytazz.HexMesh;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
+using static Assets.Scripts.WorldMap.GridManager;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -269,6 +271,8 @@ namespace Assets.Scripts.WorldMap
 
         public GridManager Grid { get; set; }
 
+        public Mesh HexMesh { get { return mesh; } }
+
         private void Awake()
         {
             Vertices = new List<Vector3>(6);
@@ -313,9 +317,17 @@ namespace Assets.Scripts.WorldMap
             ren.SetPropertyBlock(propertyBlock);
 
             //Material test = ren.sharedMaterial;
-
+                
             //ren.material.SetTexture("_MainTex", texture);
-           // ren.sharedMaterial.SetTexture("_MainTex", texture);
+            //ren.sharedMaterial.SetTexture("_MainTex", texture);
+        }
+
+        public void SetVector()
+        {
+            Renderer ren = GetComponent<Renderer>();
+
+            propertyBlock.SetVector("_Position", Position);
+            ren.SetPropertyBlock(propertyBlock);
         }
 
         public void Initialize(GridManager Grid, int x, int z)
@@ -327,8 +339,8 @@ namespace Assets.Scripts.WorldMap
 
             //float y = UnityEngine.Random.Range(0, hexSettings.maxHeight);
             float y = 0;
-            
-            Position = GetPosition(x, z) * hexSettings.outerHexMultiplier + new Vector3(0, y, 0);
+
+            Position = GetPosition(x, z);
 
             transform.localPosition = Position;
         }
@@ -347,11 +359,8 @@ namespace Assets.Scripts.WorldMap
                 Vertices.Add(InnerVertexPosition(i));
             }
 
-            mesh.UploadMeshData(false);
-
             CreateOuterHexMesh();
         }
-
         /// <summary>
         /// Will create an outer hex1 surrounding the inner hex1. This should be called immediatel after creating the inner hex1
         /// </summary>
@@ -520,7 +529,7 @@ namespace Assets.Scripts.WorldMap
             mesh.triangles = CombineTriangles().ToArray();
             meshCollider.sharedMesh = mesh;
 
-            // mesh.colors = VertexColors.ToArray();          
+            mesh.colors = VertexColors.ToArray();          
             SetHexMeshUVs();
             mesh.RecalculateNormals();
 
@@ -628,6 +637,15 @@ namespace Assets.Scripts.WorldMap
             mesh.RecalculateNormals();
 
             OuterHexIsHighlighted = !OuterHexIsHighlighted;
+        }
+
+        public void ClearMesh()
+        {
+            Vertices.Clear();
+            Triangles.Clear();
+            VertexColors.Clear();
+            SlopeVertices.Clear();
+            SlopeTriangles.Clear();            
         }
     }
 }

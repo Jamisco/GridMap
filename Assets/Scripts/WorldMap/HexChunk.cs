@@ -4,12 +4,39 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using Unity.Jobs;
 
 namespace Assets.Scripts.WorldMap
 {
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class HexChunk : MonoBehaviour
     {
+        //public struct Chunk: IJob
+        //{
+        //    public HexTile[] hexes;
+        //    public Mesh mesh;
+        //    public MeshCollider meshCollider;
+
+        //    public void Execute()
+        //    {
+        //        MeshFilter[] meshFilters = hexes.Select(h => h.GetComponent<MeshFilter>()).ToArray();
+
+        //        CombineInstance[] combine = new CombineInstance[meshFilters.Length];
+
+        //        for (int i = 0; i < meshFilters.Length; i++)
+        //        {
+        //            combine[i].mesh = meshFilters[i].sharedMesh;
+        //            combine[i].transform = meshFilters[i].transform.localToWorldMatrix;
+        //            meshFilters[i].gameObject.SetActive(false);
+        //        }
+
+        //        mesh = new Mesh();
+
+        //        mesh.CombineMeshes(combine);
+        //        meshCollider.sharedMesh = mesh;
+        //    }
+        //}
+        
         MeshFilter meshFilter;
         MeshCollider meshCollider;
 

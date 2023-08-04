@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dff262a89da4e44cbe2260d2f469960, type: 3}
   m_Name: HexSettings
   m_EditorClassIdentifier: 
-  outerRadius: 10
-  innerRadius: 8.660254
+  outerRadius: 1
+  innerRadius: 0.8660254
   outerHexMultiplier: 1
-  stepDistance: 8
+  stepDistance: 0
   outerHexSize: 1
   maxHeight: 30
   InnerHighlightColor: {r: 0.9133022, g: 1, b: 0, a: 0.59607846}

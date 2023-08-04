@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -210,7 +211,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 700
+  orthographic size: 30
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -234,13 +235,29 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 588, y: 350, z: 550}
+  m_LocalPosition: {x: 40, y: 10, z: 20}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f7627e3251b1c048a3ac328d45f5f9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  zoomSpeed: 1500
+  minZoomDistance: 5
+  maxZoomDistance: 5000
+  dragSpeed: 500
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -501,7 +518,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1129321349
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -760,8 +777,11 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 076fa9785d5e5374990495e8fa7f052e, type: 3}
   - {fileID: 2800000, guid: 1294c03d8a368554486b73ee57230068, type: 3}
   hexDisplay: 1
-  ChunkSizeX: 20
-  ChunkSizeZ: 20
+  useChunks: 0
+  useGpu: 1
+  material: {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
+  ChunkSizeX: 25
+  ChunkSizeZ: 25
 --- !u!4 &1605946131
 Transform:
   m_ObjectHideFlags: 0
@@ -793,7 +813,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MainPlanet:
-    PlanetSize: {x: 200, y: 200}
+    PlanetSize: {x: 50, y: 50}
     InitialSunRayFocus: {x: 10, y: 10}
     SunlightVector: {x: 0, y: 0}
     SunlightIntensity: 1
