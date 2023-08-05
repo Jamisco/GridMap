@@ -2,11 +2,11 @@ using UnityEngine;
 
 public class MoveCamera : MonoBehaviour
 {
-    public float zoomSpeed = 5f;
+    public float zoomSpeed = 10;
     public float minZoomDistance = 5f;
-    public float maxZoomDistance = 20f;
+    public float maxZoomDistance = 50f;
 
-    public float dragSpeed = 2f;
+    public float dragSpeed = 20f;
 
     private Camera mainCamera;
 
@@ -15,9 +15,12 @@ public class MoveCamera : MonoBehaviour
         mainCamera = Camera.main;
     }
 
+    private Vector3 dragOrigin;
+    private Vector3 originalPosition;
+
     private void Update()
     {
-        if(Time.timeSinceLevelLoad > 2f)
+        if(Time.timeSinceLevelLoad > 3f)
         {
             // Camera Zoom
             float scrollInput = Input.GetAxis("Mouse ScrollWheel");
@@ -25,10 +28,16 @@ public class MoveCamera : MonoBehaviour
             mainCamera.orthographicSize = Mathf.Clamp(mainCamera.orthographicSize - zoomAmount, minZoomDistance, maxZoomDistance);
 
             // Camera Drag
+            if (Input.GetMouseButtonDown(0))
+            {
+                dragOrigin = Input.mousePosition;
+                originalPosition = transform.position;
+            }
+
             if (Input.GetMouseButton(0))
             {
-                Vector3 dragDelta = new Vector3(-Input.GetAxis("Mouse X"), -Input.GetAxis("Mouse Y"), 0f) * dragSpeed * Time.deltaTime;
-                transform.Translate(dragDelta);
+                Vector3 offset = Camera.main.ScreenToWorldPoint(dragOrigin) - Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                transform.position = originalPosition + offset;
             }
         }      
     }

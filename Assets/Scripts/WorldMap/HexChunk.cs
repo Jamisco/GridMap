@@ -3,92 +3,49 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEditor.SceneManagement;
 using UnityEngine;
-using Unity.Jobs;
+using UnityEngine.ProBuilder;
 
 namespace Assets.Scripts.WorldMap
 {
-    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class HexChunk : MonoBehaviour
     {
-        //public struct Chunk: IJob
-        //{
-        //    public HexTile[] hexes;
-        //    public Mesh mesh;
-        //    public MeshCollider meshCollider;
-
-        //    public void Execute()
-        //    {
-        //        MeshFilter[] meshFilters = hexes.Select(h => h.GetComponent<MeshFilter>()).ToArray();
-
-        //        CombineInstance[] combine = new CombineInstance[meshFilters.Length];
-
-        //        for (int i = 0; i < meshFilters.Length; i++)
-        //        {
-        //            combine[i].mesh = meshFilters[i].sharedMesh;
-        //            combine[i].transform = meshFilters[i].transform.localToWorldMatrix;
-        //            meshFilters[i].gameObject.SetActive(false);
-        //        }
-
-        //        mesh = new Mesh();
-
-        //        mesh.CombineMeshes(combine);
-        //        meshCollider.sharedMesh = mesh;
-        //    }
-        //}
-        
-        MeshFilter meshFilter;
-        MeshCollider meshCollider;
-
         public List<HexTile> hexes;
 
+        public Matrix4x4 SpawnPosition;
+
+        private Mesh mesh;
         private void Awake()
         {
-            meshFilter = GetComponent<MeshFilter>();
-            meshCollider = GetComponent<MeshCollider>();
-
+            mesh = new Mesh();
             hexes = new List<HexTile>();
         }
         public void AddHex(HexTile hex)
         {
             hexes.Add(hex);
-            hex.transform.SetParent(transform);
         }
 
         public void CombinesMeshes()
         {
-            MeshFilter[] meshFilters = hexes.Select(h => h.GetComponent<MeshFilter>()).ToArray();
+            SpawnPosition = Matrix4x4.Translate(hexes[0].Position);
             
-            CombineInstance[] combine = new CombineInstance[meshFilters.Length];
+            CombineInstance[] combine = new CombineInstance[hexes.Count];
 
-            for (int i = 0; i < meshFilters.Length; i++)
+            for (int i = 0; i < hexes.Count; i++)
             {
-                combine[i].mesh = meshFilters[i].sharedMesh;
-                combine[i].transform = meshFilters[i].transform.localToWorldMatrix;
-                meshFilters[i].gameObject.SetActive(false);
+                combine[i].mesh = hexes[i].HexMesh;
+
+                combine[i].transform = Matrix4x4.Translate(hexes[i].Position);
             }
 
-            meshFilter.mesh = new Mesh();
-
-            meshFilter.mesh.CombineMeshes(combine);
-            meshCollider.sharedMesh = meshFilter.mesh;
-
+            mesh.CombineMeshes(combine);
         }
 
-        public void DestroyAllChildren()
-        {
-            foreach (Transform child in transform)
-            {
-                Destroy(child.gameObject);
-            }
-        }
-
-
+        public static RenderParams rp;
         public void DrawChunk()
         {
-            CombinesMeshes();
-
-            //transform.position = hexes[0].transform.localToWorldMatrix.GetPosition() * 10;
+            Graphics.RenderMesh(rp, mesh, 0, SpawnPosition);
         }
     }
 }

@@ -10,8 +10,7 @@ using static Assets.Scripts.WorldMap.GridManager;
 
 namespace Assets.Scripts.WorldMap
 {
-    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-    public class HexTile : MonoBehaviour
+    public class HexTile
     {
         public static HexSettings hexSettings;
 
@@ -256,14 +255,9 @@ namespace Assets.Scripts.WorldMap
         public Vector2Int GridCoordinates;
         public Vector3 Position { get; set; }
 
-        public Color InnerHexColor;
-        public Color OuterHexColor;
-
         Mesh mesh;
-        MeshCollider meshCollider;
 
         List<Vector3> Vertices;
-        List<Color> VertexColors;
         List<int> Triangles;
 
         List<Vector3> SlopeVertices;
@@ -273,66 +267,18 @@ namespace Assets.Scripts.WorldMap
 
         public Mesh HexMesh { get { return mesh; } }
 
-        private void Awake()
+        // We should pass the planet instead
+        public HexTile(GridManager grid, int x, int z)
         {
             Vertices = new List<Vector3>(6);
             Triangles = new List<int>(12);
-            VertexColors = new List<Color>();
 
             SlopeVertices = new List<Vector3>(4);
             SlopeTriangles = new List<int>(6);
 
-            mesh = GetComponent<MeshFilter>().mesh;
-            meshCollider = GetComponent<MeshCollider>();   
-            
-            propertyBlock = new MaterialPropertyBlock();
-        }
+            mesh = new Mesh();
 
-        public void SetColors(Color aColor, bool drawAfter = false)
-        {
-            VertexColors.Clear();
-
-            foreach(Vector3 pos in Vertices)
-            {
-                VertexColors.Add(aColor);
-            }
-
-            foreach (Vector3 pos in SlopeVertices)
-            {
-                VertexColors.Add(aColor);
-            }
-
-            if (drawAfter)
-            {
-                DrawMesh();
-            }
-        }
-
-        private MaterialPropertyBlock propertyBlock;
-        public void SetTexture(Texture2D texture)
-        {
-            Renderer ren = GetComponent<Renderer>();
-
-            propertyBlock.SetTexture("_MainTex", texture);
-            ren.SetPropertyBlock(propertyBlock);
-
-            //Material test = ren.sharedMaterial;
-                
-            //ren.material.SetTexture("_MainTex", texture);
-            //ren.sharedMaterial.SetTexture("_MainTex", texture);
-        }
-
-        public void SetVector()
-        {
-            Renderer ren = GetComponent<Renderer>();
-
-            propertyBlock.SetVector("_Position", Position);
-            ren.SetPropertyBlock(propertyBlock);
-        }
-
-        public void Initialize(GridManager Grid, int x, int z)
-        {
-            this.Grid = Grid;
+            this.Grid = grid;
 
             AxialCoordinates = Axial.ToAxial(x, z);
             GridCoordinates = new Vector2Int(x, z);
@@ -342,7 +288,10 @@ namespace Assets.Scripts.WorldMap
 
             Position = GetPosition(x, z);
 
-            transform.localPosition = Position;
+            CreateMesh();
+            CreateOuterHexMesh();
+
+            DrawMesh();
         }
 
         public void CreateMesh()
@@ -377,6 +326,7 @@ namespace Assets.Scripts.WorldMap
             }
         }
 
+        // To Do update this to use Y position
         public void CreateSlopeMesh()
         {
             // slope mesh will start from outer hex1 vertices and slope towards inner hex1 vertice
@@ -385,7 +335,7 @@ namespace Assets.Scripts.WorldMap
             SlopeVertices.Clear();
             SlopeTriangles.Clear();
 
-            List<HexTile> surroundingHex = GetSurroundingHexes();
+            List<HexTile> surroundingHex = GetSurroundingHexes(this, Grid);
 
             for (int i = 0; i < 6; i++)
             {
@@ -478,61 +428,31 @@ namespace Assets.Scripts.WorldMap
                 }
             }
         }
-        public Texture2D AddWatermark(Texture2D background, Texture2D watermark, Texture2D third)
-        {
-
-            int startX = 0;
-            int startY = background.height - watermark.height;
-
-            for (int x = startX; x < background.width; x++)
-            {
-
-                for (int y = startY; y < background.height; y++)
-                {
-                    Color bgColor = background.GetPixel(x, y);
-                    Color wmColor = watermark.GetPixel(x - startX, y - startY);
-
-                    Color final_color = Color.Lerp(bgColor, wmColor, wmColor.a / 1.0f);
-
-                    background.SetPixel(x, y, final_color);
-                }
-            }
-
-            background.Apply();
-
-            return background;
-        }
-
-
         public void RefreshMesh()
         {
             DrawMesh();
         }
-
-        public List<HexTile> GetSurroundingHexes()
+        public static List<HexTile> GetSurroundingHexes(HexTile hex, GridManager grid)
         {
             List<HexTile> surroundingHexs = new List<HexTile>();
 
             for (int i = 0; i < 6; i++)
             {
-                Axial sPos = AxialCoordinates + SurroundingHexes[i];
+                Axial sPos = hex.AxialCoordinates + SurroundingHexes[i];
 
                 // will include null
-                surroundingHexs.Add(Grid.GetHexTile(sPos));
+                surroundingHexs.Add(grid.GetHexTile(sPos));
             }
 
             return surroundingHexs;
-        }
+        }      
         public void DrawMesh(Vector3 position = default)
         {
             mesh.vertices = CombineVertices().ToArray();
             mesh.triangles = CombineTriangles().ToArray();
-            meshCollider.sharedMesh = mesh;
-
-            mesh.colors = VertexColors.ToArray();          
+   
             SetHexMeshUVs();
-            mesh.RecalculateNormals();
-
+            //mesh.RecalculateNormals();
         }
 
         public void SetHexMeshUVs()
@@ -550,7 +470,7 @@ namespace Assets.Scripts.WorldMap
             mesh.uv = uv;
         }
 
-        /// higher values better the smaller the mapping wll be
+        /// higher values the smaller the mapping wll be
         private float mul = 3;
         private Vector2 GetHexUV(Vector3 vertexPosition)
         {
@@ -576,7 +496,6 @@ namespace Assets.Scripts.WorldMap
 
             return combinedVertices;
         }
-
         List<int> CombineTriangles()
         {
             List<int> combinedTriangles = new List<int>(Triangles);
@@ -585,65 +504,10 @@ namespace Assets.Scripts.WorldMap
             return combinedTriangles;
         }
 
-        public bool InnerHexIsHighlighted = false;
-        public bool OuterHexIsHighlighted = false;
-        public void ToggleInnerHighlight()
-        {
-            Color hColor = hexSettings.InnerHighlightColor;
-            
-            if (InnerHexIsHighlighted)
-            {
-                hColor = InnerHexColor;
-            }
-
-            if(VertexColors.Count == 0)
-            {
-                SetColors(Color.white);
-            }
-
-            for (int i = 0; i < 6; i++)
-            {
-                VertexColors[i] = hColor;
-            }
-
-            InnerHexIsHighlighted = !InnerHexIsHighlighted;
-
-            mesh.colors = VertexColors.ToArray();
-            mesh.RecalculateNormals();
-
-            
-
-        }
-        public void ToggleOuterHighlight()
-        {
-            Color hColor = hexSettings.OuterHighlightColor;
-
-            if (OuterHexIsHighlighted)
-            {
-                hColor = OuterHexColor;
-            }
-
-            if (VertexColors.Count == 0)
-            {
-                SetColors(Color.white);
-            }
-
-            for (int i = 6; i < 12; i++)
-            {
-                VertexColors[i] = hColor;
-            }
-
-            mesh.colors = VertexColors.ToArray();
-            mesh.RecalculateNormals();
-
-            OuterHexIsHighlighted = !OuterHexIsHighlighted;
-        }
-
         public void ClearMesh()
         {
             Vertices.Clear();
             Triangles.Clear();
-            VertexColors.Clear();
             SlopeVertices.Clear();
             SlopeTriangles.Clear();            
         }
