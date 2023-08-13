@@ -43,6 +43,8 @@ namespace Assets.Scripts.WorldMap
         public Text textCom;
         public Toggle toggle;
         public Button genBtn;
+        public Text triangles;
+        public Text vertices;
 
         private void Awake()
         {
@@ -109,6 +111,9 @@ namespace Assets.Scripts.WorldMap
             timer.Start();
             HexTiles.Clear();
 
+            HexChunk.Triangles = 0;
+            HexChunk.Vertices = 0;
+
             HexTile hc;
             
             for (int x = 0; x < MapSize.x; x++)
@@ -148,6 +153,8 @@ namespace Assets.Scripts.WorldMap
             {
                 chunk.CombinesMeshes();
             }
+
+            SetStats();
         }
 
         public int ChunkSizeX, ChunkSizeZ;
@@ -193,6 +200,11 @@ namespace Assets.Scripts.WorldMap
             }
         }
 
+        public void SetStats()
+        {
+            triangles.text = HexChunk.Triangles.ToString("0.00") + "K";
+            vertices.text = HexChunk.Vertices.ToString("0.00") + "K";
+        }
         private void Update()
         {
             foreach (HexChunk chunk in hexChunks)

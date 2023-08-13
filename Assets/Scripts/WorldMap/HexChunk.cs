@@ -51,7 +51,10 @@ namespace Assets.Scripts.WorldMap
         }
 
         public static bool simplify = true;
-        
+
+        public static float Triangles = 0;
+        public static float Vertices = 0;
+
         public void CombinesMeshes()
         {
             if(simplify)
@@ -87,7 +90,10 @@ namespace Assets.Scripts.WorldMap
 
                 mesh.CombineMeshes(combine);
             }
-            
+
+            Triangles += mesh.triangles.Length / (float) 3 / (float)1000;
+            Vertices += mesh.vertices.Length / (float) 1000;
+
             //transform.position = SpawnPosition.GetColumn(3);
         }
         
@@ -102,6 +108,7 @@ namespace Assets.Scripts.WorldMap
             Graphics.RenderMesh(rp, mesh, 0, SpawnPosition);
         }
     }
+
 
     public struct SimplifiedHex
     {
