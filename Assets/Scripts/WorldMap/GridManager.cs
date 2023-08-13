@@ -21,36 +21,32 @@ namespace Assets.Scripts.WorldMap
     [System.Serializable]
     public class GridManager : MonoBehaviour
     {
-        public PlanetGenerator planetGenerator;
-
         public HexSettings HexSettings;
-
         public GameObject hexParent;
-
         public HexChunk hexChunkPrefab;
+        
         private List<HexChunk> hexChunks;
-
         Dictionary<Axial, HexTile> HexTiles;
 
         public List<Texture2D> Texutures;
 
         public HexDisplay hexDisplay;
-
         public enum HexDisplay { Color, Texture}
 
-        public bool useChunks = false;
+        private RenderParams rp;
 
-        public Mesh aMesh;
         HexTile hex;
 
+        [Header("UI")]
         public InputField xInput;
         public InputField yInput;
-
+        public Text textCom;
+        public Toggle toggle;
         public Button genBtn;
 
         private void Awake()
         {
-            //Application.targetFrameRate = -1;
+            Application.targetFrameRate = -1;
             
             HexTiles = new Dictionary<Axial, HexTile>();
 
@@ -62,42 +58,31 @@ namespace Assets.Scripts.WorldMap
 
             HexChunk.rp = rp;
 
-            if(useGpu)
-            {
-                createmesh();
-                GenerateGridInstance();
-            }
-            else
-            {
-                GenerateGrid();       
-            }
+            createmesh();
+            GenerateGridChunks();
 
+            toggle.onValueChanged.AddListener(ToggleClick);
             genBtn.onClick.AddListener(GenClick);
         }
-
-        Stopwatch timer = new Stopwatch();
 
         public Material material;
 
         public Vector2 MapSize;
-        public void GenerateGrid()
+
+        public void ToggleClick(bool value)
         {
-            HexTiles.Clear();
-            HexTile hex;
-
-            for (int x = 0; x < MapSize.x; x++)
+            if (toggle.isOn)
             {
-                for (int y = 0; y < MapSize.y; y++)
-                {
-                    hex = new HexTile(this, x, y);
-
-                    HexTiles.Add(hex.AxialCoordinates, hex);
-                }
+                toggle.GetComponentInChildren<Image>().color = Color.green;
+                    
+                HexChunk.simplify = true;
             }
-
-            UseChunks();
+            else
+            {
+                toggle.GetComponentInChildren<Image>().color = Color.white;
+                HexChunk.simplify = false;
+            }
         }
-
         public void GenClick()
         {
             int x = int.Parse(xInput.text);
@@ -106,35 +91,9 @@ namespace Assets.Scripts.WorldMap
             MapSize.x = x;
             MapSize.y = y;
 
-            GenerateGrid();
+            GenerateGridChunks();
         }
     
-        public void ChooseGrid()
-        {
-            if (useGpu)
-            {
-                ready = false;
-                createmesh();
-                GenerateGridInstance();
-            }
-            else
-            {              
-                GenerateGrid();
-            }
-        }
-
-        InstanceData[][] allIdataArray;
-        List<List<InstanceData>> allIdata = new List<List<InstanceData>>();
-        
-        RenderParams rp;
-        List<InstanceData> IDatas = new List<InstanceData>();
-
-        public bool useGpu;
-        bool ready = false;
-        struct InstanceData
-        {
-            public Matrix4x4 objectToWorld;
-        };
         void createmesh()
         {
             hex = new HexTile(this, 0, 0);
@@ -143,57 +102,35 @@ namespace Assets.Scripts.WorldMap
 
             hex.DrawMesh();
         }
-        void splitList()
+
+        Stopwatch timer = new Stopwatch();
+        public void GenerateGridChunks()
         {
-            allIdata.Clear();
-
-            int chunkSize = 1023;
-
-            int chunkCount = Mathf.CeilToInt(IDatas.Count / (float)chunkSize);
-
-            for (int i = 0; i < chunkCount; i++)
-            {
-                allIdata.Add(IDatas.GetRange(i * chunkSize, Mathf.Min(chunkSize, IDatas.Count - (i * chunkSize))));
-            }
-
-            Debug.Log("IData size: " + allIdata.Count);
-
-            allIdataArray = allIdata.Select(a => a.ToArray()).ToArray();
-        }
-        public void GenerateGridInstance()
-        {
+            timer.Start();
             HexTiles.Clear();
 
-            IDatas.Clear();
-
+            HexTile hc;
+            
             for (int x = 0; x < MapSize.x; x++)
             {
                 for (int z = 0; z < MapSize.y; z++)
                 {
-                    InstanceData data;
-
-                    data.objectToWorld = Matrix4x4.Translate(GetPosition(x, z));
-
-                    IDatas.Add(data);
+                    hc = new HexTile(this, x, z);
+                    HexTiles.Add(hc.AxialCoordinates, hc);
                 }
             }
 
-            splitList();
-            ready = true;           
-        }
-        private void GpuInstance()
-        {
-            if (useGpu && ready)
-            {
-                Span<InstanceData[]> spanData = allIdataArray.AsSpan();
+            UseChunks();
 
-                for (int i = 0; i < spanData.Length; i++)
-                {
-                    Graphics.RenderMeshInstanced(rp, hex.HexMesh, 0, spanData[i]);
-                }
-            }
-        }
+            timer.Stop();
 
+            TimeSpan elapsedTime = timer.Elapsed;
+            string formattedTime = $"{elapsedTime.Minutes}m : {elapsedTime.Seconds} s";
+
+            Debug.Log("Generation Took : " + formattedTime);
+
+            timer.Reset();
+        }
         public void UseChunks()
         {
             CreateHexChunks();
@@ -216,7 +153,7 @@ namespace Assets.Scripts.WorldMap
         public int ChunkSizeX, ChunkSizeZ;
         private void CreateHexChunks()
         {
-            // create the appropriate ammount of chunks to cover the whole map
+            // create the appropriate amount of chunks to cover the whole map
             DestroyChildren();
 
             hexChunks.Clear();
@@ -230,7 +167,7 @@ namespace Assets.Scripts.WorldMap
             {
                 for (int x = 0; x < chunkCountX; x++)
                 {
-                    chunk = Instantiate(hexChunkPrefab, hexParent.transform);     
+                    chunk = Instantiate(hexChunkPrefab, hexParent.transform);
                     hexChunks.Add(chunk);
                 }
             }
@@ -238,12 +175,9 @@ namespace Assets.Scripts.WorldMap
             Debug.Log("Chunk count: " + hexChunks.Count);
         }
 
-        JobHandle handle;
-
         public float updateInterval = 0.5f; // Time interval to update the frame rate
         private float accumulatedFrames = 0;
         private float timeLeft;
-        public Text textCom;
         void CountFrame()
         {
             timeLeft -= Time.deltaTime;
@@ -261,39 +195,13 @@ namespace Assets.Scripts.WorldMap
 
         private void Update()
         {
-            if(useGpu)
+            foreach (HexChunk chunk in hexChunks)
             {
-                GpuInstance();
+                chunk.DrawChunk();
             }
-            else
-            {
-                foreach (HexChunk chunk in hexChunks)
-                {
-                    chunk.DrawChunk();
-                }
 
-                CountFrame();
-            }       
+            CountFrame();
         }
-
-
-        private void LateUpdate()
-        {
-            handle.Complete();
-        }
-
-        public static List<HexChunk> hallo;
-        public struct Chunker : IJob
-        {
-            public void Execute()
-            {
-                foreach (HexChunk chunk in hallo)
-                {
-                    chunk.DrawChunk();
-                }
-            }
-        }
-
         private HexChunk GetHexChunk(int x, int z)
         {
             // base on the x and z coordinates of the hex, return the appropriate chunk index
@@ -308,17 +216,6 @@ namespace Assets.Scripts.WorldMap
 
             return hexChunks[index];
         }
-        private Texture2D RandomTextures()
-        {
-            return Texutures[UnityEngine.Random.Range(0, Texutures.Count)];
-        }
-
-        private void ComputePlanetNoise()
-        {
-            planetGenerator.SetComputeSize();
-            planetGenerator.ComputeBiomeNoise();
-        }
-
         public HexTile GetHexTile(Axial coordinates)
         {
             HexTile hex = null;
@@ -355,7 +252,7 @@ namespace Assets.Scripts.WorldMap
 
             if (GUILayout.Button("Generate Grid"))
             {
-                exampleScript.ChooseGrid();
+                exampleScript.GenerateGridChunks();
             }
         }
     }

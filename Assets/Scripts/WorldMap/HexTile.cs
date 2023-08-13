@@ -289,17 +289,13 @@ namespace Assets.Scripts.WorldMap
             Position = GetPosition(x, z);
 
             CreateMesh();
-            CreateOuterHexMesh();
+            //CreateOuterHexMesh();
 
             DrawMesh();
         }
 
         public void CreateMesh()
         {
-            mesh.Clear();
-            Vertices.Clear();
-            Triangles.Clear();
-
             Triangles.AddRange(SetInnerTriangles(Vertices.Count));
 
             // Add the vertices
@@ -308,7 +304,7 @@ namespace Assets.Scripts.WorldMap
                 Vertices.Add(InnerVertexPosition(i));
             }
 
-            CreateOuterHexMesh();
+            //CreateOuterHexMesh();
         }
         /// <summary>
         /// Will create an outer hex1 surrounding the inner hex1. This should be called immediatel after creating the inner hex1
@@ -511,5 +507,11 @@ namespace Assets.Scripts.WorldMap
             SlopeVertices.Clear();
             SlopeTriangles.Clear();            
         }
+
+        public Vector3 GetWorldVertexPosition(int index)
+        {
+            return Vertices[index] + Position;
+        }
+
     }
 }

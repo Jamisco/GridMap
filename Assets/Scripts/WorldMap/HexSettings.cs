@@ -23,6 +23,7 @@ namespace Assets.Scripts.WorldMap
         public Color InnerHighlightColor;
         public Color OuterHighlightColor;
 
+        public Vector2 HexSize { get; private set; }
         /// <summary>
         /// The corners of the hex tile. Starting from the top center corner and going clockwise
         /// </summary>
@@ -46,6 +47,8 @@ namespace Assets.Scripts.WorldMap
                 new Vector3(-innerRadius, 0f, 0.5f * outerRadius),
                 new Vector3(0f, 0f, outerRadius)
             };
+
+            HexSize = new Vector2(outerRadius * 2f + stepDistance, innerRadius * 2f + stepDistance);
         }
 
 #if UNITY_EDITOR
