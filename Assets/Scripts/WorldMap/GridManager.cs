@@ -40,12 +40,14 @@ namespace Assets.Scripts.WorldMap
         [Header("UI")]
         public InputField xInput;
         public InputField yInput;
+        public InputField chunkInput;
         public Text textCom;
         public Toggle toggle;
         public Button genBtn;
         public Text triangles;
         public Text vertices;
 
+        private ComputeBuffer argsBuffer;  // Indirect buffer
         private void Awake()
         {
             Application.targetFrameRate = -1;
@@ -58,8 +60,6 @@ namespace Assets.Scripts.WorldMap
 
             HexTile.hexSettings = HexSettings;
 
-            HexChunk.rp = rp;
-
             createmesh();
             GenerateGridChunks();
 
@@ -69,7 +69,7 @@ namespace Assets.Scripts.WorldMap
 
         public Material material;
 
-        public Vector2 MapSize;
+        public Vector2Int MapSize;
 
         public void ToggleClick(bool value)
         {
@@ -89,13 +89,19 @@ namespace Assets.Scripts.WorldMap
         {
             int x = int.Parse(xInput.text);
             int y = int.Parse(yInput.text);
-
+            
+            if (chunkInput.text != "")
+            {
+                int chunk = int.Parse(chunkInput.text);
+                ChunkSizeX = chunk;
+                ChunkSizeZ = chunk;
+            }
+            
             MapSize.x = x;
             MapSize.y = y;
 
             GenerateGridChunks();
-        }
-    
+        }   
         void createmesh()
         {
             hex = new HexTile(this, 0, 0);
@@ -113,17 +119,8 @@ namespace Assets.Scripts.WorldMap
 
             HexChunk.Triangles = 0;
             HexChunk.Vertices = 0;
-
-            HexTile hc;
             
-            for (int x = 0; x < MapSize.x; x++)
-            {
-                for (int z = 0; z < MapSize.y; z++)
-                {
-                    hc = new HexTile(this, x, z);
-                    HexTiles.Add(hc.AxialCoordinates, hc);
-                }
-            }
+            HexTiles = HexTile.CreatesHexes(MapSize, this);
 
             UseChunks();
 
@@ -149,9 +146,18 @@ namespace Assets.Scripts.WorldMap
                 hc.AddHex(hexTile);
             }
 
+            meshes.Clear();
+
+            uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+            argsBuffer = new ComputeBuffer(hexChunks.Count, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+
+            //uint[] args = new uint[5] { mesh.GetIndexCount(0), (uint)0, mesh.GetIndexStart(0), mesh.GetBaseVertex(0), 0 };
+            argsBuffer.SetData(args);
+
             foreach (HexChunk chunk in hexChunks)
             {
                 chunk.CombinesMeshes();
+                meshes.Add(chunk.mesh);
             }
 
             SetStats();
@@ -174,7 +180,7 @@ namespace Assets.Scripts.WorldMap
             {
                 for (int x = 0; x < chunkCountX; x++)
                 {
-                    chunk = Instantiate(hexChunkPrefab, hexParent.transform);
+                    chunk = new HexChunk();
                     hexChunks.Add(chunk);
                 }
             }
@@ -205,11 +211,15 @@ namespace Assets.Scripts.WorldMap
             triangles.text = HexChunk.Triangles.ToString("0.00") + "K";
             vertices.text = HexChunk.Vertices.ToString("0.00") + "K";
         }
+
+        Matrix4x4 SpawnPosition = Matrix4x4.Translate(Vector3.zero);
+
+        private List<Mesh> meshes = new List<Mesh>();
         private void Update()
         {
-            foreach (HexChunk chunk in hexChunks)
+            for (int i = 0; i < meshes.Count; i++)
             {
-                chunk.DrawChunk();
+                Graphics.RenderMesh(rp, meshes[i], 0, SpawnPosition);
             }
 
             CountFrame();

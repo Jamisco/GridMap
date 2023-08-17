@@ -5,12 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityMeshSimplifier;
 using static UnityEngine.Rendering.DebugUI.Table;
 
 namespace Assets.Scripts.WorldMap
 {
-    public class HexChunk : MonoBehaviour
+    public class HexChunk
     {
         public List<HexTile> hexes;
         private List<SimplifiedHex> simpleHex;
@@ -20,8 +19,8 @@ namespace Assets.Scripts.WorldMap
 
         public Matrix4x4 SpawnPosition;
 
-        private Mesh mesh;
-        private void Awake()
+        public Mesh mesh;
+        public HexChunk()
         {
             mesh = new Mesh();
             hexes = new List<HexTile>();
@@ -73,8 +72,9 @@ namespace Assets.Scripts.WorldMap
 
                     combine[i].transform = Matrix4x4.Translate(Vector3.zero);
                 }
-
                 mesh.CombineMeshes(combine);
+                mesh.OptimizeIndexBuffers();
+                mesh.OptimizeReorderVertexBuffer();
             }
             else
             {
@@ -95,18 +95,7 @@ namespace Assets.Scripts.WorldMap
             Vertices += mesh.vertices.Length / (float) 1000;
 
             //transform.position = SpawnPosition.GetColumn(3);
-        }
-        
-        public static RenderParams rp;
-        public void DrawChunk()
-        {
-            //foreach (SimplifiedHex ah in simpleHex)
-            //{
-            //    Graphics.RenderMesh(rp, ah.mesh, 0, Matrix4x4.Translate(Vector3.zero));
-            //}
-
-            Graphics.RenderMesh(rp, mesh, 0, SpawnPosition);
-        }
+        }       
     }
 
 

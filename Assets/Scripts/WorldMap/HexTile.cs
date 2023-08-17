@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Roytazz.HexMesh;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
@@ -276,8 +276,6 @@ namespace Assets.Scripts.WorldMap
             SlopeVertices = new List<Vector3>(4);
             SlopeTriangles = new List<int>(6);
 
-            mesh = new Mesh();
-
             this.Grid = grid;
 
             AxialCoordinates = Axial.ToAxial(x, z);
@@ -291,7 +289,43 @@ namespace Assets.Scripts.WorldMap
             CreateMesh();
             //CreateOuterHexMesh();
 
-            DrawMesh();
+            //DrawMesh();
+        }
+
+        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, GridManager grid)
+        {
+            int initCapacity = MapSize.x * MapSize.y + 10;
+            int numProcs = Environment.ProcessorCount;
+            int concurrencyLevel = numProcs * 2;
+            
+            ConcurrentDictionary<Axial, HexTile> tempHexTiles = new ConcurrentDictionary<Axial, HexTile>( concurrencyLevel, initCapacity);
+
+            int pass = 0;
+            int fail = 0;
+            
+            Parallel.For(0, MapSize.x, x =>
+            {
+                for (int z = 0; z < MapSize.y; z++)
+                {
+                    HexTile hc = new HexTile(grid, x, z);
+
+                    bool test = tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
+
+                    if (!test)
+                    {
+                        fail++;
+                    }
+                    else
+                    {
+                        pass++;
+                    }
+
+                }
+            });
+
+            Debug.Log($"Pass: {pass} Fail: {fail}");
+
+            return new Dictionary<Axial, HexTile>(tempHexTiles);
         }
 
         public void CreateMesh()
@@ -444,6 +478,8 @@ namespace Assets.Scripts.WorldMap
         }      
         public void DrawMesh(Vector3 position = default)
         {
+            mesh = new Mesh();
+            
             mesh.vertices = CombineVertices().ToArray();
             mesh.triangles = CombineTriangles().ToArray();
    
