@@ -50,9 +50,7 @@ namespace Assets.Scripts.WorldMap
         public Text vertices;
 
         public bool UseInstance = true;
-        public bool Simplify = true;
-        
-        private ComputeBuffer argsBuffer;  // Indirect buffer
+        public bool Simplify = true;  
         private void Awake()
         {
             Application.targetFrameRate = -1;
@@ -62,113 +60,23 @@ namespace Assets.Scripts.WorldMap
             hexChunks = new List<HexChunk>();
 
             rp = new RenderParams(material);
-
-            HexChunk.simplify = Simplify;
+            
             HexTile.hexSettings = HexSettings;
 
-            createmesh();
             GenerateGridChunks();
-
-            simplifyToggle.onValueChanged.AddListener(SimplifyToggleClick);
-            gpuToggle.onValueChanged.AddListener(GpuToggleClick);
-
-            SimplifyToggleClick(Simplify);
-            GpuToggleClick(UseInstance);
-
-            genBtn.onClick.AddListener(GenClick);
         }
 
         public Material material;
 
         public Vector2Int MapSize;
 
-        public void SimplifyToggleClick(bool value)
-        {
-            if (simplifyToggle.isOn)
-            {
-                simplifyToggle.GetComponentInChildren<Image>().color = Color.green;
-                    
-                Simplify = true;
-            }
-            else
-            {
-                if(MapSize.x * MapSize.y > 490000)
-                {
-                    Debug.LogError("Map Size is too big. It must be simplified");
-                    return;
-                }
-                simplifyToggle.GetComponentInChildren<Image>().color = Color.white;
-                Simplify = false;
-            }
-
-            HexChunk.simplify = Simplify;
-
-            // so we can rerender game objects
-            foreach (HexChunk chunk in hexChunks)
-            {
-                chunk.SwitchMesh();
-            }
-
-            DestroyChildren();
-
-            SetStats();
-        }
-
-        public void GpuToggleClick(bool value)
-        {
-            if (gpuToggle.isOn)
-            {
-                gpuToggle.GetComponentInChildren<Image>().color = Color.green;
-                UseInstance = true;
-            }
-            else
-            {
-                gpuToggle.GetComponentInChildren<Image>().color = Color.white;
-                UseInstance = false;
-            }
-        }
-        public void GenClick()
-        {
-            int x = int.Parse(xInput.text);
-            int y = int.Parse(yInput.text);
-            
-            if (chunkInput.text != "")
-            {
-                int chunk = int.Parse(chunkInput.text);
-                ChunkSizeX = chunk;
-                ChunkSizeZ = chunk;
-            }
-            
-            MapSize.x = x;
-            MapSize.y = y;
-
-            GenerateGridChunks();
-        }   
-        void createmesh()
-        {
-            hex = new HexTile(this, 0, 0);
-
-            hex.CreateMesh();
-
-            hex.DrawMesh();
-        }
+        public int ChunkSizeX, ChunkSizeZ;
 
         Stopwatch timer = new Stopwatch();
         public void GenerateGridChunks()
         {
-            if (MapSize.x * MapSize.y > 490000 && Simplify == false)
-            {
-                Debug.LogError("Map Size is too big. It must be simplified");
-                return;
-            }
-
             timer.Start();
             HexTiles.Clear();
-
-            HexChunk.ResetStats();
-
-            HexChunk.simplify = Simplify;
-
 
             HexTiles = HexTile.CreatesHexes(MapSize, this);
 
@@ -183,8 +91,14 @@ namespace Assets.Scripts.WorldMap
 
             timer.Reset();
         }
+        void createmesh()
+        {
+            hex = new HexTile(this, 0, 0);
 
-        public int ChunkSizeX, ChunkSizeZ;
+            hex.CreateMesh();
+
+            hex.DrawMesh();
+        }
         private void CreateHexChunks()
         {
             // create the appropriate amount of chunks to cover the whole map
@@ -221,102 +135,20 @@ namespace Assets.Scripts.WorldMap
                 hc.AddHex(hexTile);
             }
 
-            meshes.Clear();
-
-            uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
-            argsBuffer = new ComputeBuffer(hexChunks.Count, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
-
-            //uint[] args = new uint[5] { mesh.GetIndexCount(0), (uint)0, mesh.GetIndexStart(0), mesh.GetBaseVertex(0), 0 };
-            argsBuffer.SetData(args);
-
             foreach (HexChunk chunk in hexChunks)
             {
                 chunk.CombinesMeshes();
-                meshes.Add(chunk.mesh);
             }
 
-            SetStats();
-
-            if (!UseInstance)
-            {
-                GenerateHexObjects();
-            }
+            GenerateHexObjects();
         }
-
-        public float updateInterval = 0.5f; // Time interval to update the frame rate
-        private float accumulatedFrames = 0;
-        private float timeLeft;
-        void CountFrame()
+        private void GenerateHexObjects()
         {
-            timeLeft -= Time.deltaTime;
-            accumulatedFrames++;
-
-            if (timeLeft <= 0)
-            {
-                float framesPerSecond = accumulatedFrames / updateInterval;
-                textCom.text = framesPerSecond.ToString("F2");
-
-                accumulatedFrames = 0;
-                timeLeft = updateInterval;
-            }
-        }
-
-        public void SetStats()
-        {
-            triangles.text = HexChunk.Triangles.ToString("0.00") + "K";
-            vertices.text = HexChunk.Vertices.ToString("0.00") + "K";
-        }
-
-        Matrix4x4 SpawnPosition = Matrix4x4.Translate(Vector3.zero);
-
-        private List<Mesh> meshes = new List<Mesh>();
-        private void Update()
-        {
-            if(timer.IsRunning)
-            {
-                return;
-            }
-
-            if(UseInstance)
-            {
-                RenderInstance();
-            }
-            else
-            {
-                GenerateHexObjects();
-            }
-            
-            CountFrame();
-        }
-
-        public void RenderInstance()
-        {
-            if(rendered)
-            {
-                DestroyChildren();
-            }
-
-            foreach (HexChunk chunk in hexChunks)
-            {
-                Graphics.RenderMesh(rp, chunk.mesh, 0, SpawnPosition);
-            }
-        }
-
-        bool rendered = false;
-        public void GenerateHexObjects()
-        {
-            if(rendered)
-            {
-                return;
-            }
-
             foreach (HexChunk chunk in hexChunks)
             {
                 GameObject newChunk = Instantiate(hexChunkPrefab, hexParent.transform);
                 newChunk.GetComponent<MeshFilter>().mesh = chunk.mesh;
             }
-
-            rendered = true;
         }
         private HexChunk GetHexChunk(int x, int z)
         {
@@ -339,7 +171,6 @@ namespace Assets.Scripts.WorldMap
 
             return hex;
         }
-
         private void DestroyChildren()
         {
             int childCount = hexParent.transform.childCount;
@@ -351,10 +182,44 @@ namespace Assets.Scripts.WorldMap
                 // If you want to use DestroyImmediate instead, replace the line above with:
                 // DestroyImmediate(child.gameObject);
             }
-
-            rendered = false;
         }
 
+        //////////////////////////////////////////////////// UI CODE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+        public float updateInterval = 0.5f; // Time interval to update the frame rate
+        private float accumulatedFrames = 0;
+        private float timeLeft;
+        void CountFrame()
+        {
+            timeLeft -= Time.deltaTime;
+            accumulatedFrames++;
+
+            if (timeLeft <= 0)
+            {
+                float framesPerSecond = accumulatedFrames / updateInterval;
+                textCom.text = framesPerSecond.ToString("F2");
+
+                accumulatedFrames = 0;
+                timeLeft = updateInterval;
+            }
+        }
+        public void GenClick()
+        {
+            int x = int.Parse(xInput.text);
+            int y = int.Parse(yInput.text);
+
+            if (chunkInput.text != "")
+            {
+                int chunk = int.Parse(chunkInput.text);
+                ChunkSizeX = chunk;
+                ChunkSizeZ = chunk;
+            }
+
+            MapSize.x = x;
+            MapSize.y = y;
+
+            GenerateGridChunks();
+        }
 
     }
 

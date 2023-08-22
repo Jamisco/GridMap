@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Assets.Scripts.Miscellaneous.HexFunctions;
 using static UnityEngine.Rendering.DebugUI.Table;
 
 namespace Assets.Scripts.WorldMap
@@ -17,7 +19,8 @@ namespace Assets.Scripts.WorldMap
         public Dictionary<int, List<HexTile>> hexRows
             = new Dictionary<int, List<HexTile>>();
 
-        public Matrix4x4 SpawnPosition;
+        // since the hexes positions are set regardless of the position of the chunk, we simply spawn the chunk at 0,0
+        public static Matrix4x4 SpawnPosition = Matrix4x4.Translate(Vector3.zero);
 
         public Mesh mesh;
         public HexChunk()
@@ -40,18 +43,19 @@ namespace Assets.Scripts.WorldMap
                 hexRows[hex.GridCoordinates.y].Add(hex);
             }
         }
+        public void CombinesMeshes()
+        {
+            Simplify();
+        }
 
         public void Simplify()
         {
-            simplifiedMesh = new Mesh();
-            
+            mesh = new Mesh();
+
             foreach (var row in hexRows)
             {
                 simpleHex.Add(new SimplifiedHex(row.Value));
             }
-
-            // since the hexes positions are set regardless of the position of the chunk, we simply spawn the chunk at 0,0
-            SpawnPosition = Matrix4x4.Translate(Vector3.zero);
 
             CombineInstance[] combine = new CombineInstance[simpleHex.Count];
 
@@ -62,110 +66,9 @@ namespace Assets.Scripts.WorldMap
                 combine[i].transform = Matrix4x4.Translate(Vector3.zero);
             }
 
-            simplifiedMesh.CombineMeshes(combine);
-
-            SimTriangles += simplifiedMesh.triangles.Length / (float)3 / (float)1000;
-            SimVertices += simplifiedMesh.vertices.Length / (float)1000;
-            
+            mesh.CombineMeshes(combine);
         }
 
-        public void NonSimplified()
-        {
-            NonSimplifiedMesh = new Mesh();
-
-            int hexCount = hexes.Count;
-            
-            if(hexCount > 10000)
-            {
-                Debug.Log("Too many hexes to combine. Mesh must be simplified");
-                return;
-            }
-            
-            CombineInstance[] combine = new CombineInstance[hexCount];
-
-            for (int i = 0; i < hexes.Count; i++)
-            {
-                combine[i].mesh = hexes[i].DrawMesh();
-
-                combine[i].transform = Matrix4x4.Translate(hexes[i].Position);
-            }
-
-            NonSimplifiedMesh.CombineMeshes(combine);
-
-            NonTriangles += NonSimplifiedMesh.triangles.Length / (float)3 / (float)1000;
-            NonVertices += NonSimplifiedMesh.vertices.Length / (float)1000;
-        }
-
-        public static bool simplify = true;
-
-        public static float Triangles = 0;
-        public static float Vertices = 0;
-
-        private static float SimTriangles = 0;
-        private static float SimVertices = 0;
-
-        private static float NonTriangles = 0;
-        private static float NonVertices = 0;
-
-        public static void ResetStats()
-        {
-            Triangles = 0;
-            Vertices = 0;
-
-            SimTriangles = 0;
-            SimVertices = 0;
-
-            NonTriangles = 0;
-            NonVertices = 0;
-        }
-
-        private Mesh simplifiedMesh;
-        private Mesh NonSimplifiedMesh;
-        public void CombinesMeshes()
-        {
-            if (simplify)
-            {
-                Simplify();
-
-            }
-            else
-            {
-                NonSimplified();               
-            }
-
-            SwitchMesh();
-
-            //transform.position = SpawnPosition.GetColumn(3);
-        } 
-        
-        public void SwitchMesh()
-        {
-            if (simplify)
-            {
-                if(simplifiedMesh == null)
-                {
-                    Simplify();
-                }
-                
-                mesh = simplifiedMesh;
-
-                Triangles = SimTriangles;
-                Vertices = SimVertices;
-
-            }
-            else
-            {
-                if (NonSimplifiedMesh == null)
-                {
-                    NonSimplified();
-                }
-                
-                mesh = NonSimplifiedMesh;
-
-                Triangles = NonTriangles;
-                Vertices = NonVertices;
-            }
-        }
     }
 
 
@@ -175,6 +78,7 @@ namespace Assets.Scripts.WorldMap
         
         public List<Vector3> Vertices;
         public List<int> Triangles;
+        List<Vector2> UV;
 
         public Vector3 Position;
 
@@ -183,6 +87,7 @@ namespace Assets.Scripts.WorldMap
         {
             Vertices = new List<Vector3>();
             Triangles = new List<int>();
+            UV = new List<Vector2>();
 
             hexRows = rows;
 
@@ -204,11 +109,26 @@ namespace Assets.Scripts.WorldMap
 
         }
 
+        private static Vector2[] HexUV
+        {
+            get
+            {
+                return new Vector2[]
+                {
+                    new Vector2(0.5f, 1),
+                    new Vector2(1, 0.75f),
+                    new Vector2(1, 0.25f),
+                    new Vector2(0.5f, 0),
+                    new Vector2(0, 0.25f),
+                    new Vector2(0, 0.75f)
+                };
+            }
+        }
+    
+
         private void Simplify()
         {
             HexTile hex;
-
-            Vector2 size = HexTile.hexSettings.HexSize;
 
             Vector3 leftTop = Vector3.zero;
             Vector3 leftBot = Vector3.zero;
@@ -241,21 +161,30 @@ namespace Assets.Scripts.WorldMap
                 foreach (int num in topIndex)
                 {
                     Vertices.Add(hex.GetWorldVertexPosition(num));
+                    UV.Add(HexUV[num]);
                     Triangles.Add(Vertices.Count - 1);
                 }
 
                 foreach (int num in botIndex)
                 {
                     Vertices.Add(hex.GetWorldVertexPosition(num));
+                    UV.Add(HexUV[num]);
                     Triangles.Add(Vertices.Count - 1);
                 }
             }
 
             // add the 2 mid main triangles
             Vertices.Add(leftBot); // -4
+            UV.Add(GetUV(4, 1));
+
             Vertices.Add(leftTop); // - 3
+            UV.Add(GetUV(5, 1));
+
             Vertices.Add(rightBot); // - 2
+            UV.Add(GetUV(2, hexRows.Count));
+            
             Vertices.Add(rightTop); // -1
+            UV.Add(GetUV(1, hexRows.Count));
 
             Triangles.Add(Vertices.Count - 4);
             Triangles.Add(Vertices.Count - 3);
@@ -267,8 +196,17 @@ namespace Assets.Scripts.WorldMap
 
             mesh.vertices = Vertices.ToArray();
             mesh.triangles = Triangles.ToArray();
+            mesh.uv = UV.ToArray();
 
         }
-        
+
+        private Vector2 GetUV(int hexSide, int rowCount)
+        {
+            Vector2 uv = HexUV[hexSide];
+
+            uv.x = uv.x * rowCount;
+
+            return uv;
+        }
     }
 }

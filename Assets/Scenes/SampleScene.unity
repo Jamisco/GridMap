@@ -543,7 +543,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &356669708
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2703,9 +2703,9 @@ MonoBehaviour:
   UseInstance: 0
   Simplify: 0
   material: {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
-  MapSize: {x: 100, y: 100}
-  ChunkSizeX: 25
-  ChunkSizeZ: 25
+  MapSize: {x: 50, y: 50}
+  ChunkSizeX: 10
+  ChunkSizeZ: 10
   updateInterval: 0.5
 --- !u!4 &1605946131
 Transform:
