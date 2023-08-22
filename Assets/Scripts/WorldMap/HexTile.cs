@@ -257,8 +257,8 @@ namespace Assets.Scripts.WorldMap
 
         Mesh mesh;
 
-        List<Vector3> Vertices;
-        List<int> Triangles;
+        public List<Vector3> Vertices;
+        public List<int> Triangles;
 
         List<Vector3> SlopeVertices;
         List<int> SlopeTriangles;
@@ -322,9 +322,7 @@ namespace Assets.Scripts.WorldMap
 
                 }
             });
-
-            Debug.Log($"Pass: {pass} Fail: {fail}");
-
+            
             return new Dictionary<Axial, HexTile>(tempHexTiles);
         }
 
@@ -458,10 +456,6 @@ namespace Assets.Scripts.WorldMap
                 }
             }
         }
-        public void RefreshMesh()
-        {
-            DrawMesh();
-        }
         public static List<HexTile> GetSurroundingHexes(HexTile hex, GridManager grid)
         {
             List<HexTile> surroundingHexs = new List<HexTile>();
@@ -476,14 +470,18 @@ namespace Assets.Scripts.WorldMap
 
             return surroundingHexs;
         }      
-        public void DrawMesh(Vector3 position = default)
+        public Mesh DrawMesh(Vector3 position = default)
         {
             mesh = new Mesh();
-            
-            mesh.vertices = CombineVertices().ToArray();
-            mesh.triangles = CombineTriangles().ToArray();
-   
-            SetHexMeshUVs();
+
+            //mesh.vertices = CombineVertices().ToArray();
+            //mesh.triangles = CombineTriangles().ToArray();
+
+            mesh.vertices = Vertices.ToArray();
+            mesh.triangles = Triangles.ToArray();
+
+            return mesh;
+            // SetHexMeshUVs();
             //mesh.RecalculateNormals();
         }
 

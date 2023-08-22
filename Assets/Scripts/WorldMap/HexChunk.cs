@@ -43,10 +43,57 @@ namespace Assets.Scripts.WorldMap
 
         public void Simplify()
         {
+            simplifiedMesh = new Mesh();
+            
             foreach (var row in hexRows)
             {
                 simpleHex.Add(new SimplifiedHex(row.Value));
             }
+
+            // since the hexes positions are set regardless of the position of the chunk, we simply spawn the chunk at 0,0
+            SpawnPosition = Matrix4x4.Translate(Vector3.zero);
+
+            CombineInstance[] combine = new CombineInstance[simpleHex.Count];
+
+            for (int i = 0; i < simpleHex.Count; i++)
+            {
+                combine[i].mesh = simpleHex[i].mesh;
+
+                combine[i].transform = Matrix4x4.Translate(Vector3.zero);
+            }
+
+            simplifiedMesh.CombineMeshes(combine);
+
+            SimTriangles += simplifiedMesh.triangles.Length / (float)3 / (float)1000;
+            SimVertices += simplifiedMesh.vertices.Length / (float)1000;
+            
+        }
+
+        public void NonSimplified()
+        {
+            NonSimplifiedMesh = new Mesh();
+
+            int hexCount = hexes.Count;
+            
+            if(hexCount > 10000)
+            {
+                Debug.Log("Too many hexes to combine. Mesh must be simplified");
+                return;
+            }
+            
+            CombineInstance[] combine = new CombineInstance[hexCount];
+
+            for (int i = 0; i < hexes.Count; i++)
+            {
+                combine[i].mesh = hexes[i].DrawMesh();
+
+                combine[i].transform = Matrix4x4.Translate(hexes[i].Position);
+            }
+
+            NonSimplifiedMesh.CombineMeshes(combine);
+
+            NonTriangles += NonSimplifiedMesh.triangles.Length / (float)3 / (float)1000;
+            NonVertices += NonSimplifiedMesh.vertices.Length / (float)1000;
         }
 
         public static bool simplify = true;
@@ -54,48 +101,71 @@ namespace Assets.Scripts.WorldMap
         public static float Triangles = 0;
         public static float Vertices = 0;
 
+        private static float SimTriangles = 0;
+        private static float SimVertices = 0;
+
+        private static float NonTriangles = 0;
+        private static float NonVertices = 0;
+
+        public static void ResetStats()
+        {
+            Triangles = 0;
+            Vertices = 0;
+
+            SimTriangles = 0;
+            SimVertices = 0;
+
+            NonTriangles = 0;
+            NonVertices = 0;
+        }
+
+        private Mesh simplifiedMesh;
+        private Mesh NonSimplifiedMesh;
         public void CombinesMeshes()
         {
-            if(simplify)
+            if (simplify)
             {
-
                 Simplify();
 
-                // since the hexes positions are set regardless of the position of the chunk, we simply spawn the chunk at 0,0
-                SpawnPosition = Matrix4x4.Translate(Vector3.zero);
-
-                CombineInstance[] combine = new CombineInstance[simpleHex.Count];
-
-                for (int i = 0; i < simpleHex.Count; i++)
-                {
-                    combine[i].mesh = simpleHex[i].mesh;
-
-                    combine[i].transform = Matrix4x4.Translate(Vector3.zero);
-                }
-                mesh.CombineMeshes(combine);
-                mesh.OptimizeIndexBuffers();
-                mesh.OptimizeReorderVertexBuffer();
             }
             else
             {
-                SpawnPosition = Matrix4x4.Translate(Vector3.zero);
-                CombineInstance[] combine = new CombineInstance[hexes.Count];
-
-                for (int i = 0; i < hexes.Count; i++)
-                {
-                    combine[i].mesh = hexes[i].HexMesh;
-
-                    combine[i].transform = Matrix4x4.Translate(hexes[i].Position);
-                }
-
-                mesh.CombineMeshes(combine);
+                NonSimplified();               
             }
 
-            Triangles += mesh.triangles.Length / (float) 3 / (float)1000;
-            Vertices += mesh.vertices.Length / (float) 1000;
+            SwitchMesh();
 
             //transform.position = SpawnPosition.GetColumn(3);
-        }       
+        } 
+        
+        public void SwitchMesh()
+        {
+            if (simplify)
+            {
+                if(simplifiedMesh == null)
+                {
+                    Simplify();
+                }
+                
+                mesh = simplifiedMesh;
+
+                Triangles = SimTriangles;
+                Vertices = SimVertices;
+
+            }
+            else
+            {
+                if (NonSimplifiedMesh == null)
+                {
+                    NonSimplified();
+                }
+                
+                mesh = NonSimplifiedMesh;
+
+                Triangles = NonTriangles;
+                Vertices = NonVertices;
+            }
+        }
     }
 
 

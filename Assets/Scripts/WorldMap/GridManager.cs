@@ -15,6 +15,7 @@ using System.Linq;
 using Unity.Jobs;
 using Unity.Collections;
 using UnityEngine.UI;
+using UnityEngine.Rendering;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -23,7 +24,7 @@ namespace Assets.Scripts.WorldMap
     {
         public HexSettings HexSettings;
         public GameObject hexParent;
-        public HexChunk hexChunkPrefab;
+        public GameObject hexChunkPrefab;
         
         private List<HexChunk> hexChunks;
         Dictionary<Axial, HexTile> HexTiles;
@@ -42,11 +43,15 @@ namespace Assets.Scripts.WorldMap
         public InputField yInput;
         public InputField chunkInput;
         public Text textCom;
-        public Toggle toggle;
+        public Toggle simplifyToggle;
+        public Toggle gpuToggle;
         public Button genBtn;
         public Text triangles;
         public Text vertices;
 
+        public bool UseInstance = true;
+        public bool Simplify = true;
+        
         private ComputeBuffer argsBuffer;  // Indirect buffer
         private void Awake()
         {
@@ -58,12 +63,18 @@ namespace Assets.Scripts.WorldMap
 
             rp = new RenderParams(material);
 
+            HexChunk.simplify = Simplify;
             HexTile.hexSettings = HexSettings;
 
             createmesh();
             GenerateGridChunks();
 
-            toggle.onValueChanged.AddListener(ToggleClick);
+            simplifyToggle.onValueChanged.AddListener(SimplifyToggleClick);
+            gpuToggle.onValueChanged.AddListener(GpuToggleClick);
+
+            SimplifyToggleClick(Simplify);
+            GpuToggleClick(UseInstance);
+
             genBtn.onClick.AddListener(GenClick);
         }
 
@@ -71,18 +82,49 @@ namespace Assets.Scripts.WorldMap
 
         public Vector2Int MapSize;
 
-        public void ToggleClick(bool value)
+        public void SimplifyToggleClick(bool value)
         {
-            if (toggle.isOn)
+            if (simplifyToggle.isOn)
             {
-                toggle.GetComponentInChildren<Image>().color = Color.green;
+                simplifyToggle.GetComponentInChildren<Image>().color = Color.green;
                     
-                HexChunk.simplify = true;
+                Simplify = true;
             }
             else
             {
-                toggle.GetComponentInChildren<Image>().color = Color.white;
-                HexChunk.simplify = false;
+                if(MapSize.x * MapSize.y > 490000)
+                {
+                    Debug.LogError("Map Size is too big. It must be simplified");
+                    return;
+                }
+                simplifyToggle.GetComponentInChildren<Image>().color = Color.white;
+                Simplify = false;
+            }
+
+            HexChunk.simplify = Simplify;
+
+            // so we can rerender game objects
+            foreach (HexChunk chunk in hexChunks)
+            {
+                chunk.SwitchMesh();
+            }
+
+            DestroyChildren();
+
+            SetStats();
+        }
+
+        public void GpuToggleClick(bool value)
+        {
+            if (gpuToggle.isOn)
+            {
+                gpuToggle.GetComponentInChildren<Image>().color = Color.green;
+                UseInstance = true;
+            }
+            else
+            {
+                gpuToggle.GetComponentInChildren<Image>().color = Color.white;
+                UseInstance = false;
             }
         }
         public void GenClick()
@@ -114,12 +156,20 @@ namespace Assets.Scripts.WorldMap
         Stopwatch timer = new Stopwatch();
         public void GenerateGridChunks()
         {
+            if (MapSize.x * MapSize.y > 490000 && Simplify == false)
+            {
+                Debug.LogError("Map Size is too big. It must be simplified");
+                return;
+            }
+
             timer.Start();
             HexTiles.Clear();
 
-            HexChunk.Triangles = 0;
-            HexChunk.Vertices = 0;
-            
+            HexChunk.ResetStats();
+
+            HexChunk.simplify = Simplify;
+
+
             HexTiles = HexTile.CreatesHexes(MapSize, this);
 
             UseChunks();
@@ -132,6 +182,31 @@ namespace Assets.Scripts.WorldMap
             Debug.Log("Generation Took : " + formattedTime);
 
             timer.Reset();
+        }
+
+        public int ChunkSizeX, ChunkSizeZ;
+        private void CreateHexChunks()
+        {
+            // create the appropriate amount of chunks to cover the whole map
+            DestroyChildren();
+
+            hexChunks.Clear();
+
+            int chunkCountX = Mathf.CeilToInt(MapSize.x / ChunkSizeX);
+            int chunkCountZ = Mathf.CeilToInt(MapSize.y / ChunkSizeZ);
+
+            HexChunk chunk;
+
+            for (int z = 0; z < chunkCountZ; z++)
+            {
+                for (int x = 0; x < chunkCountX; x++)
+                {
+                    chunk = new HexChunk();
+                    hexChunks.Add(chunk);
+                }
+            }
+
+            Debug.Log("Chunk count: " + hexChunks.Count);
         }
         public void UseChunks()
         {
@@ -161,31 +236,11 @@ namespace Assets.Scripts.WorldMap
             }
 
             SetStats();
-        }
 
-        public int ChunkSizeX, ChunkSizeZ;
-        private void CreateHexChunks()
-        {
-            // create the appropriate amount of chunks to cover the whole map
-            DestroyChildren();
-
-            hexChunks.Clear();
-
-            int chunkCountX = Mathf.CeilToInt(MapSize.x / ChunkSizeX);
-            int chunkCountZ = Mathf.CeilToInt(MapSize.y / ChunkSizeZ);
-
-            HexChunk chunk;
-            
-            for (int z = 0; z < chunkCountZ; z++)
+            if (!UseInstance)
             {
-                for (int x = 0; x < chunkCountX; x++)
-                {
-                    chunk = new HexChunk();
-                    hexChunks.Add(chunk);
-                }
+                GenerateHexObjects();
             }
-
-            Debug.Log("Chunk count: " + hexChunks.Count);
         }
 
         public float updateInterval = 0.5f; // Time interval to update the frame rate
@@ -217,12 +272,51 @@ namespace Assets.Scripts.WorldMap
         private List<Mesh> meshes = new List<Mesh>();
         private void Update()
         {
-            for (int i = 0; i < meshes.Count; i++)
+            if(timer.IsRunning)
             {
-                Graphics.RenderMesh(rp, meshes[i], 0, SpawnPosition);
+                return;
             }
 
+            if(UseInstance)
+            {
+                RenderInstance();
+            }
+            else
+            {
+                GenerateHexObjects();
+            }
+            
             CountFrame();
+        }
+
+        public void RenderInstance()
+        {
+            if(rendered)
+            {
+                DestroyChildren();
+            }
+
+            foreach (HexChunk chunk in hexChunks)
+            {
+                Graphics.RenderMesh(rp, chunk.mesh, 0, SpawnPosition);
+            }
+        }
+
+        bool rendered = false;
+        public void GenerateHexObjects()
+        {
+            if(rendered)
+            {
+                return;
+            }
+
+            foreach (HexChunk chunk in hexChunks)
+            {
+                GameObject newChunk = Instantiate(hexChunkPrefab, hexParent.transform);
+                newChunk.GetComponent<MeshFilter>().mesh = chunk.mesh;
+            }
+
+            rendered = true;
         }
         private HexChunk GetHexChunk(int x, int z)
         {
@@ -257,6 +351,8 @@ namespace Assets.Scripts.WorldMap
                 // If you want to use DestroyImmediate instead, replace the line above with:
                 // DestroyImmediate(child.gameObject);
             }
+
+            rendered = false;
         }
 
 

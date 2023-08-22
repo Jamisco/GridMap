@@ -81,6 +81,6 @@ Material:
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _HeightColor: {r: 1, g: 2, b: 0, a: 0}
     - _HeightRange: {r: 0, g: 1, b: 0, a: 0}
-    - _Position: {r: 0, g: 0, b: 0, a: 0}
+    - _Position: {r: 0.33, g: 0, b: 0, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
