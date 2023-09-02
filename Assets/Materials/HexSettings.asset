@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   outerRadius: 1
   innerRadius: 0.8660254
-  outerHexMultiplier: 1
+  outerHexMultiplier: 1.5
   stepDistance: 0
-  outerHexSize: 1
-  maxHeight: 30
+  outerHexSize: 0
+  maxHeight: 2
   InnerHighlightColor: {r: 0.9133022, g: 1, b: 0, a: 0.59607846}
   OuterHighlightColor: {r: 0.9433962, g: 0.07564971, b: 0.07564971, a: 0.56078434}

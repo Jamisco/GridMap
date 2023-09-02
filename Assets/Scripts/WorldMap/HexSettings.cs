@@ -28,7 +28,7 @@ namespace Assets.Scripts.WorldMap
         /// The corners of the hex tile. Starting from the top center corner and going clockwise
         /// </summary>
         [NonSerialized] public Vector3[] VertexCorners;
-
+        
         private void Awake()
         {
             OnValidate();
@@ -49,6 +49,106 @@ namespace Assets.Scripts.WorldMap
             };
 
             HexSize = new Vector2(outerRadius * 2f + stepDistance, innerRadius * 2f + stepDistance);
+        }
+
+        public Vector2[] BaseHexUV
+        {
+            get
+            {
+                return new Vector2[]
+                {
+                    new Vector2(0.5f, 1),
+                    new Vector2(1, 0.75f),
+                    new Vector2(1, 0.25f),
+                    new Vector2(0.5f, 0),
+                    new Vector2(0, 0.25f),
+                    new Vector2(0, 0.75f)
+                };
+            }
+        }
+
+        public Vector2[] GetSlopeUV(float height)
+        {
+            Vector2[] slopes = SlopeHexUV;
+
+            for (int i = 0; i < slopes.Length; i++)
+            {
+                slopes[i].y
+                    *= CalculateHypotenuse(height / 2, stepDistance / 2) / outerRadius;
+            }
+
+            return slopes;
+        }
+
+        public float CalculateHypotenuse(float sideA, float sideB)
+        {
+            // Calculate the length of the hypotenuse using the Pythagorean theorem
+            float hypotenuse = Mathf.Sqrt(sideA * sideA + sideB * sideB);
+            return hypotenuse;
+        }
+
+        public Vector2[] GetMidTriangleSlopeUV(float height)
+        {
+            Vector2[] slopes = GetSlopeUV(height);
+
+            // index 1 = bottom right
+            // index 3 = top right
+
+            List<Vector2> newSlopes = new List<Vector2>();
+
+            float increment = Mathf.Abs(slopes[1].y - slopes[3].y);
+
+            Vector2 slopeTop = slopes[3];
+            
+            Vector2 slopeRight = new Vector2(slopes[1].x + increment, slopes[1].y);
+            Vector2 slopeRightTop = new Vector2(slopeRight.x, slopeRight.y + increment);
+
+            Vector2 midSlope = (slopeTop + slopeRightTop + slopeRight) / 3f;
+
+            newSlopes.Add(slopeRight);
+            newSlopes.Add(midSlope);
+
+            //for (int i = 0; i < slopes.Length; i++)
+            //{
+            //    slopes[i].y
+            //        *= CalculateHypotenuse(height / 2, stepDistance / 2) / outerRadius;
+            //}
+
+            return newSlopes.ToArray();
+        }
+
+        public Vector2[] SlopeHexUV
+        {
+            get
+            {
+                // this is from top left to top right
+                // to bottom left to right
+                return new Vector2[]
+                {
+                    new Vector2(0, 0),
+                    new Vector2(1, 0),
+                    
+                    new Vector2(0, 1),
+                    new Vector2(1, 1),
+                };
+            }
+        }
+
+        public Vector2[] MidTriangleUV
+        {
+            get
+            {
+                // this is from top left to top right
+                // to bottom left to right
+                return new Vector2[]
+                {
+                    new Vector2(1, 0),
+                    new Vector2(0, .5f),
+
+                    //new Vector2(0, 1),
+                   // new Vector2(1, 1),
+                };
+            }
         }
 
 #if UNITY_EDITOR

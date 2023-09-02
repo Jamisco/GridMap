@@ -48,22 +48,44 @@ namespace Assets.Scripts.WorldMap
             Simplify();
         }
 
+        private static Vector2[] HexUV
+        {
+            get
+            {
+                return new Vector2[]
+                {
+                    new Vector2(0.5f, 1),
+                    new Vector2(1, 0.75f),
+                    new Vector2(1, 0.25f),
+                    new Vector2(0.5f, 0),
+                    new Vector2(0, 0.25f),
+                    new Vector2(0, 0.75f)
+                };
+            }
+        }
+
         public void Simplify()
         {
             mesh = new Mesh();
 
-            foreach (var row in hexRows)
+            CombineInstance[] combine = new CombineInstance[hexes.Count];
+
+            for (int i = 0; i < hexes.Count; i++)
             {
-                simpleHex.Add(new SimplifiedHex(row.Value));
-            }
+                combine[i].mesh = hexes[i].DrawMesh();
 
-            CombineInstance[] combine = new CombineInstance[simpleHex.Count];
+                // set first 6 uv index 
 
-            for (int i = 0; i < simpleHex.Count; i++)
-            {
-                combine[i].mesh = simpleHex[i].mesh;
+                Vector2[] tempUv = combine[i].mesh.uv;
 
-                combine[i].transform = Matrix4x4.Translate(Vector3.zero);
+                //for (int j = 0; j < 6; j++)
+                //{
+                //    tempUv[j] = HexUV[j];
+                //}
+
+                //combine[i].mesh.uv = tempUv;
+
+                combine[i].transform = Matrix4x4.Translate(hexes[i].Position);
             }
 
             mesh.CombineMeshes(combine);
@@ -157,6 +179,7 @@ namespace Assets.Scripts.WorldMap
                     rightBot = hex.GetWorldVertexPosition(2);
                 }
 
+                // for uv mapping, these top and bottom edges have uv which are independent of the row they are placed, so we can just add them here
                 // add top and bottom part of hex
                 foreach (int num in topIndex)
                 {
@@ -202,6 +225,7 @@ namespace Assets.Scripts.WorldMap
 
         private Vector2 GetUV(int hexSide, int rowCount)
         {
+            // the reason we multiply the x by the row count is because since the mesh in a collection of multiple rows, we want our texture mapping to repeat for each hex
             Vector2 uv = HexUV[hexSide];
 
             uv.x = uv.x * rowCount;

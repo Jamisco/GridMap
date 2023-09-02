@@ -2703,9 +2703,9 @@ MonoBehaviour:
   UseInstance: 0
   Simplify: 0
   material: {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
-  MapSize: {x: 50, y: 50}
-  ChunkSizeX: 10
-  ChunkSizeZ: 10
+  MapSize: {x: 5, y: 5}
+  ChunkSizeX: 1
+  ChunkSizeZ: 1
   updateInterval: 0.5
 --- !u!4 &1605946131
 Transform:

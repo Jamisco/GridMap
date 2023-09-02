@@ -80,6 +80,8 @@ namespace Assets.Scripts.WorldMap
 
             HexTiles = HexTile.CreatesHexes(MapSize, this);
 
+            HexTile.CreateSlopes(HexTiles);
+
             UseChunks();
 
             timer.Stop();
@@ -95,10 +97,11 @@ namespace Assets.Scripts.WorldMap
         {
             hex = new HexTile(this, 0, 0);
 
-            hex.CreateMesh();
+            hex.CreateBaseMesh();
 
             hex.DrawMesh();
         }
+
         private void CreateHexChunks()
         {
             // create the appropriate amount of chunks to cover the whole map
