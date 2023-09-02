@@ -17,7 +17,7 @@ namespace Assets.Scripts.WorldMap
     {
         public static HexSettings hexSettings;
 
-/// <summary>
+        /// <summary>
         /// The index is the respective i
         /// Will return a tuple of 3 ints,
         /// int 1 = x direction, int 2 = y direction, int 3 = x offset
@@ -25,7 +25,6 @@ namespace Assets.Scripts.WorldMap
         /// </summary>
         public static (int, int, int)[] StepVertexModifier =
         {
-            //
              new (0, 1, 1),
              new (1, 0, 0),
              new (0, -1, 1),
@@ -579,6 +578,11 @@ namespace Assets.Scripts.WorldMap
         public Vector3 GetWorldVertexPosition(int index)
         {
             return Vertices[index] + Position;
+        }
+
+        public int VertexCount()
+        {
+            return CombineVertices().Count;
         }
 
     }

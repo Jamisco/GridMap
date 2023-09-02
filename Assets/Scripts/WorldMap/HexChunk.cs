@@ -23,12 +23,43 @@ namespace Assets.Scripts.WorldMap
         public static Matrix4x4 SpawnPosition = Matrix4x4.Translate(Vector3.zero);
 
         public Mesh mesh;
-        public HexChunk()
+
+        public Vector2Int StartPosition;
+
+        public BoundsInt ChunkBounds;
+        public HexChunk(BoundsInt aBounds)
         {
+            ChunkBounds = aBounds;
+            ChunkBounds.ClampToBounds(aBounds);
+
             mesh = new Mesh();
             hexes = new List<HexTile>();
             simpleHex = new List<SimplifiedHex>();
         }
+
+        public bool IsInChunk(HexTile hex)
+        {
+            if (ChunkBounds.Contains((Vector3Int)hex.GridCoordinates))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool IsInChunk(int x, int y)
+        {
+            // its wrong for some reason, idk why but you must use bounds
+            Bounds hey = new Bounds(ChunkBounds.center, ChunkBounds.size);
+
+            if (hey.Contains(new Vector3Int(x, y, 0)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public void AddHex(HexTile hex)
         {
             hexes.Add(hex);

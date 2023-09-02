@@ -69,12 +69,13 @@ namespace Assets.Scripts.WorldMap
 
         public Vector2[] GetSlopeUV(float height)
         {
+            // this can be improved... by adding to the base UV
             Vector2[] slopes = SlopeHexUV;
 
             for (int i = 0; i < slopes.Length; i++)
             {
                 slopes[i].y
-                    *= CalculateHypotenuse(height / 2, stepDistance / 2) / outerRadius;
+                    *= CalculateHypotenuse(height / 2, stepDistance / 2) / innerRadius;
             }
 
             return slopes;
@@ -93,6 +94,10 @@ namespace Assets.Scripts.WorldMap
 
             // index 1 = bottom right
             // index 3 = top right
+
+            /// This works by getting the UV of the slopes,
+            /// calculating the sizes and adding them.... i recommend u comment out code to see how they work.
+            /// 
 
             List<Vector2> newSlopes = new List<Vector2>();
 
@@ -130,23 +135,6 @@ namespace Assets.Scripts.WorldMap
                     
                     new Vector2(0, 1),
                     new Vector2(1, 1),
-                };
-            }
-        }
-
-        public Vector2[] MidTriangleUV
-        {
-            get
-            {
-                // this is from top left to top right
-                // to bottom left to right
-                return new Vector2[]
-                {
-                    new Vector2(1, 0),
-                    new Vector2(0, .5f),
-
-                    //new Vector2(0, 1),
-                   // new Vector2(1, 1),
                 };
             }
         }

@@ -70,7 +70,7 @@ namespace Assets.Scripts.WorldMap
 
         public Vector2Int MapSize;
 
-        public int ChunkSizeX, ChunkSizeZ;
+        public int ChunkSize;
 
         Stopwatch timer = new Stopwatch();
         public void GenerateGridChunks()
@@ -87,7 +87,7 @@ namespace Assets.Scripts.WorldMap
             timer.Stop();
 
             TimeSpan elapsedTime = timer.Elapsed;
-            string formattedTime = $"{elapsedTime.Minutes}m : {elapsedTime.Seconds} s";
+            string formattedTime = $"{elapsedTime.Minutes}m : {elapsedTime.Seconds} s : {elapsedTime.Milliseconds} ms";
 
             Debug.Log("Generation Took : " + formattedTime);
 
@@ -109,8 +109,26 @@ namespace Assets.Scripts.WorldMap
 
             hexChunks.Clear();
 
-            int chunkCountX = Mathf.CeilToInt(MapSize.x / ChunkSizeX);
-            int chunkCountZ = Mathf.CeilToInt(MapSize.y / ChunkSizeZ);
+            // 6 for the base hex, 6 for each slope on each side of the hex
+            
+            int maxHexVertCount = 42;
+
+            int maxVertCount = 65535;
+
+            int maxHexCount = maxVertCount / maxHexVertCount;
+
+            ChunkSize = (int)Mathf.Sqrt(maxHexCount);
+
+            if (ChunkSize > MapSize.x || ChunkSize > MapSize.y)
+            {
+                // Since all chunks will be squares, we use the smaller of the two map sizes
+                ChunkSize = Mathf.Min(MapSize.x, MapSize.y);
+            }
+
+            ChunkSize -= 1;
+
+            int chunkCountX = Mathf.CeilToInt((float)MapSize.x / ChunkSize);
+            int chunkCountZ = Mathf.CeilToInt((float)MapSize.y / ChunkSize);
 
             HexChunk chunk;
 
@@ -118,11 +136,41 @@ namespace Assets.Scripts.WorldMap
             {
                 for (int x = 0; x < chunkCountX; x++)
                 {
-                    chunk = new HexChunk();
+                    bool inX = (x + 1) * ChunkSize <= MapSize.x;
+                    bool inZ = (z + 1) * ChunkSize <= MapSize.y;
+
+                    Vector3Int start = new Vector3Int();
+                    Vector3Int size = new Vector3Int();
+
+                    start.x = x * ChunkSize;
+                    start.y = z * ChunkSize;
+
+                    if (inX)
+                    {
+                        size.x = ChunkSize;
+                    }
+                    else
+                    {
+                        size.x = MapSize.x - start.x;
+                    }
+
+                    if (inZ)
+                    {
+                        size.y = ChunkSize;
+                    }
+                    else
+                    {
+                        size.y = MapSize.y - start.y;
+                    }
+
+                    BoundsInt bounds = new BoundsInt(start, size);
+
+                    chunk = new HexChunk(bounds);
                     hexChunks.Add(chunk);
                 }
             }
-
+            
+            Debug.Log("Chunk Size: " + ChunkSize);
             Debug.Log("Chunk count: " + hexChunks.Count);
         }
         public void UseChunks()
@@ -157,15 +205,15 @@ namespace Assets.Scripts.WorldMap
         {
             // base on the x and z coordinates of the hex, return the appropriate chunk index
             
-            int chunkCountX = Mathf.CeilToInt(MapSize.x / ChunkSizeX);
-            int chunkCountZ = Mathf.CeilToInt(MapSize.y / ChunkSizeZ);
+            for (int i = 0; i < hexChunks.Count; i++)
+            {
+                if (hexChunks[i].IsInChunk(x, z))
+                {
+                    return hexChunks[i];
+                }
+            }
 
-            int chunkX = (Mathf.FloorToInt((float)x / ChunkSizeX) % chunkCountX);
-            int chunkZ = (Mathf.FloorToInt((float)z / ChunkSizeZ) % chunkCountZ);
-
-            int index = chunkX + chunkZ * chunkCountZ;
-
-            return hexChunks[index];
+            return null;
         }
         public HexTile GetHexTile(Axial coordinates)
         {
@@ -214,8 +262,8 @@ namespace Assets.Scripts.WorldMap
             if (chunkInput.text != "")
             {
                 int chunk = int.Parse(chunkInput.text);
-                ChunkSizeX = chunk;
-                ChunkSizeZ = chunk;
+                ChunkSize = chunk;
+                ChunkSize = chunk;
             }
 
             MapSize.x = x;
