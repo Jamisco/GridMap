@@ -390,6 +390,16 @@ namespace Assets.Scripts.WorldMap
 
             return MainPlanet.GetTexture(biome);
         }
+
+        public Texture2D GetBiomeTextureLand(int x, int y)
+        {
+            float land, ocean;
+
+            land = PlanetSurface[x, y];
+            ocean = PlanetOcean[x, y];
+
+            return MainPlanet.GetLandTexture(land, ocean);
+        }
         private void DistributionOfValues(int arrayType, float value)
         {
             // initialize 10 array values

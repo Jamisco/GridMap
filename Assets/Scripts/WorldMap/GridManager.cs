@@ -31,49 +31,30 @@ namespace Assets.Scripts.WorldMap
         private List<HexChunk> hexChunks;
         Dictionary<Axial, HexTile> HexTiles;
 
+        public Material MainMaterial;
         public List<Texture2D> Texutures;
 
-        public HexDisplay hexDisplay;
-        public enum HexDisplay { Color, Texture}
+        public PlanetGenerator planetGenerator;
+        Planet mainPlanet;
 
-        private RenderParams rp;
+        private Vector2Int MapSize;
+        public int ChunkSize;
 
-        HexTile hex;
-
-        [Header("UI")]
-        public InputField xInput;
-        public InputField yInput;
-        public InputField chunkInput;
-        public Text textCom;
-        public Toggle simplifyToggle;
-        public Toggle gpuToggle;
-        public Button genBtn;
-        public Text triangles;
-        public Text vertices;
-
-        public bool UseInstance = true;
-        public bool Simplify = true;  
         private void Awake()
-        {
-            Application.targetFrameRate = -1;
-            
+        {  
             HexTiles = new Dictionary<Axial, HexTile>();
 
             hexChunks = new List<HexChunk>();
 
-            rp = new RenderParams(material);
-            
+            HexChunk.MainMaterial = MainMaterial;
             HexTile.hexSettings = HexSettings;
+
+            mainPlanet = planetGenerator.MainPlanet;
+            MapSize = mainPlanet.PlanetSize;
 
             GenerateGridChunks();
         }
-
-        public Material material;
-
-        public Vector2Int MapSize;
-
-        public int ChunkSize;
-
+        
         Stopwatch timer = new Stopwatch();
         string formattedTime = "";
         TimeSpan elapsedTime;
@@ -82,14 +63,17 @@ namespace Assets.Scripts.WorldMap
         {
             timer.Start();
             HexTiles.Clear();
-            
-            HexTiles = HexTile.CreatesHexes(MapSize, this);
 
-            Debug.Log("Creation Took : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
+            planetGenerator.SetComputeSize();
+            planetGenerator.ComputeBiomeNoise();
+
+            HexTiles = HexTile.CreatesHexes(MapSize, this, planetGenerator);
+
+            //Debug.Log("Creation Took : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
 
             HexTile.CreateSlopes(HexTiles);
 
-            Debug.Log("Slopes Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
+            //Debug.Log("Slopes Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
             
             UseChunks();
 
@@ -177,7 +161,7 @@ namespace Assets.Scripts.WorldMap
 
             AddHexToChunks();
 
-            Debug.Log("Adding To Chunk Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
+            //Debug.Log("Adding To Chunk Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
 
 
             foreach (HexChunk chunk in hexChunks)
@@ -196,6 +180,7 @@ namespace Assets.Scripts.WorldMap
             {
                 GameObject newChunk = Instantiate(hexChunkPrefab, hexParent.transform);
                 newChunk.GetComponent<MeshFilter>().mesh = chunk.mesh;
+                newChunk.GetComponent<Renderer>().materials = chunk.materials.ToArray();
             }
         }
         private void AddHexToChunks()
@@ -224,43 +209,6 @@ namespace Assets.Scripts.WorldMap
                 // If you want to use DestroyImmediate instead, replace the line above with:
                 // DestroyImmediate(child.gameObject);
             }
-        }
-
-        //////////////////////////////////////////////////// UI CODE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-        public float updateInterval = 0.5f; // Time interval to update the frame rate
-        private float accumulatedFrames = 0;
-        private float timeLeft;
-        void CountFrame()
-        {
-            timeLeft -= Time.deltaTime;
-            accumulatedFrames++;
-
-            if (timeLeft <= 0)
-            {
-                float framesPerSecond = accumulatedFrames / updateInterval;
-                textCom.text = framesPerSecond.ToString("F2");
-
-                accumulatedFrames = 0;
-                timeLeft = updateInterval;
-            }
-        }
-        public void GenClick()
-        {
-            int x = int.Parse(xInput.text);
-            int y = int.Parse(yInput.text);
-
-            if (chunkInput.text != "")
-            {
-                int chunk = int.Parse(chunkInput.text);
-                ChunkSize = chunk;
-                ChunkSize = chunk;
-            }
-
-            MapSize.x = x;
-            MapSize.y = y;
-
-            GenerateGridChunks();
         }
 
     }

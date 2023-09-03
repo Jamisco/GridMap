@@ -268,6 +268,8 @@ namespace Assets.Scripts.WorldMap
         List<int> SlopeTriangles;
         public List<Vector2> SlopeUV;
 
+        public Texture2D HexTexture;
+
         /// <summary>
         /// Quick access to the X coordinates of the tile
         /// </summary>
@@ -321,7 +323,7 @@ namespace Assets.Scripts.WorldMap
 
         }
 
-        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, GridManager grid)
+        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, GridManager grid, PlanetGenerator planet)
         {
             int initCapacity = MapSize.x * MapSize.y + 10;
             int numProcs = Environment.ProcessorCount;
@@ -329,24 +331,17 @@ namespace Assets.Scripts.WorldMap
 
             ConcurrentDictionary<Axial, HexTile> tempHexTiles = new ConcurrentDictionary<Axial, HexTile>(concurrencyLevel, initCapacity);
 
-            int fail = 0;
-
             Parallel.For(0, MapSize.x, x =>
             {
                 for (int z = 0; z < MapSize.y; z++)
                 {
                     HexTile hc = new HexTile(grid, x, z);
 
-                    bool fal = tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
-
-                    if (!fal)
-                    {
-                        fail++;
-                    }
+                    Texture2D aText = planet.GetBiomeTextureLand(x, z);
+                    hc.SetTexture(aText);
+                    tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
                 }
             });
-
-            Debug.Log("Number of Failures: " + fail);
 
             return new Dictionary<Axial, HexTile>(tempHexTiles);
         }
@@ -377,7 +372,7 @@ namespace Assets.Scripts.WorldMap
         // To Do update this to use Y position
         public void CreateSlopeMesh()
         {
-            if(hexSettings.stepDistance == 0)
+            if (hexSettings.stepDistance == 0 && hexSettings.maxHeight == 0)
             {
                 // there are no slopes
                 return;
@@ -509,19 +504,9 @@ namespace Assets.Scripts.WorldMap
             return mesh;
         }
 
-        public void SetHexMeshUVs()
+        public void SetTexture(Texture2D texture)
         {
-            List<Vector3> vertices = CombineVertices();
-
-            Vector2[] uv = new Vector2[vertices.Count];
-
-            for (int i = 0; i < vertices.Count; i++)
-            {
-                // Calculate UV coordinates based on the position of the vertex
-                uv[i] = GetHexUV(vertices[i]);
-            }
-
-            mesh.uv = uv;
+            HexTexture = texture;
         }
 
         /// higher values the smaller the mapping wll be
@@ -557,7 +542,6 @@ namespace Assets.Scripts.WorldMap
 
             return combinedTriangles;
         }
-
         List<Vector2> CombineUV()
         {
             List<Vector2> combinedUV = new List<Vector2>(hexSettings.BaseHexUV);
@@ -565,7 +549,6 @@ namespace Assets.Scripts.WorldMap
 
             return combinedUV;
         }
-
         public void ClearMesh()
         {
             Vertices.Clear();
@@ -573,12 +556,10 @@ namespace Assets.Scripts.WorldMap
             SlopeVertices.Clear();
             SlopeTriangles.Clear();
         }
-
         public Vector3 GetWorldVertexPosition(int index)
         {
             return Vertices[index] + Position;
         }
-
         public int VertexCount()
         {
             return CombineVertices().Count;

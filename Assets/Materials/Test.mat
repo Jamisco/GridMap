@@ -53,6 +53,14 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Texture1:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture2:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _Texture2D:
         m_Texture: {fileID: 2800000, guid: 48bc4a92dccd51241a882a9f682bfb76, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -76,6 +84,8 @@ Material:
     - _Metallic: 0
     - _QueueControl: 0
     - _QueueOffset: 0
+    - _Text2Lerp: 0
+    - _Text3Lerp: 0
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}

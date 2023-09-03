@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static Assets.Scripts.Miscellaneous.HexFunctions;
@@ -29,6 +30,8 @@ namespace Assets.Scripts.WorldMap
         public Vector2Int StartPosition;
 
         public BoundsInt ChunkBounds;
+
+        public static Material MainMaterial;
         public HexChunk(BoundsInt aBounds)
         {
             ChunkBounds = aBounds;
@@ -66,21 +69,15 @@ namespace Assets.Scripts.WorldMap
             return false;
         }
 
+        Dictionary<Texture2D, List<CombineInstance>> subMeshes = new Dictionary<Texture2D, List<CombineInstance>>();
         public void AddHex(HexTile hex)
         {
             // the reason we use a concurrent bag is because it is thread safe
             // thus you can add to it from multiple from threads
+
             conHexes.Add(hex);
 
-            //if (!hexRows.ContainsKey(hex.GridCoordinates.y))
-            //{
-            //    hexRows.Add(hex.GridCoordinates.y, new List<HexTile>());
-            //    hexRows[hex.GridCoordinates.y].Add(hex);
-            //}
-            //else
-            //{
-            //    hexRows[hex.GridCoordinates.y].Add(hex);
-            //}
+
         }
         public void CombinesMeshes()
         {
@@ -93,25 +90,61 @@ namespace Assets.Scripts.WorldMap
 
             CombineInstance[] combine = new CombineInstance[hexes.Count];
 
+            List<CombineInstance> tempCombine = new List<CombineInstance>();
+            CombineInstance instance;
+
             for (int i = 0; i < hexes.Count; i++)
             {
-                combine[i].mesh = hexes[i].DrawMesh();
+                HexTile hex = hexes[i];               
 
-                // set first 6 uv index 
+                subMeshes.TryGetValue(hex.HexTexture, out tempCombine);
 
-                Vector2[] tempUv = combine[i].mesh.uv;
+                if(tempCombine == null)
+                {
+                    tempCombine = new List<CombineInstance>();
+                    subMeshes.Add(hex.HexTexture, tempCombine);
+                }
 
-                //for (int j = 0; j < 6; j++)
-                //{
-                //    tempUv[j] = HexUV[j];
-                //}
+                instance = new CombineInstance();
+                
+                instance.mesh = hex.DrawMesh();
 
-                //combine[i].mesh.uv = tempUv;
+                instance.transform = Matrix4x4.Translate(hexes[i].Position);
+                tempCombine.Add(instance);
 
-                combine[i].transform = Matrix4x4.Translate(hexes[i].Position);
             }
 
-            mesh.CombineMeshes(combine);
+            Mesh preMesh;
+
+            List<CombineInstance> prelist = new List<CombineInstance>();
+
+            foreach (List<CombineInstance> item in subMeshes.Values)
+            {
+                CombineInstance subInstance = new CombineInstance();
+                preMesh = new Mesh();
+
+                preMesh.CombineMeshes(item.ToArray());
+
+                subInstance.mesh = preMesh;
+
+                prelist.Add(subInstance);
+            }
+
+            mesh.CombineMeshes(prelist.ToArray(), false, false);
+            SetMaterials();
+        }
+
+
+        public List<Material> materials = new List<Material>();
+        private void SetMaterials()
+        {
+            for(int i = 0; i < subMeshes.Count; i++)
+            {
+                Material newMat = new Material(MainMaterial);
+                newMat.SetTexture("_MainTex", subMeshes.Keys.ElementAt(i));
+
+                materials.Add(newMat);
+            }
         }
 
     }

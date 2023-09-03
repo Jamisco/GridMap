@@ -104,7 +104,19 @@ namespace Assets.Scripts.WorldMap
 
             return (Biome)BiomeTable[x, y];
         }
-                 
+
+        public float oceanCutOff = 0.35f;
+        public Texture2D GetLandTexture(float land, float ocean)
+        {
+            if (ocean <= oceanCutOff)
+            {
+                return GetTexture(Biome.Polar);
+            }
+            else
+            {
+                return GetTexture(Biome.Woodland);
+            }
+        }
 
         public Color GetColor(Biome biome)
         {
