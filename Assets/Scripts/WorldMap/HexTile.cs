@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
+using static Assets.Scripts.Miscellaneous.HexFunctions;
 using static Assets.Scripts.WorldMap.GridManager;
 using Random = System.Random;
 
@@ -213,7 +214,7 @@ namespace Assets.Scripts.WorldMap
             /// </summary>
             public Vector3Int Coordinates { get { return new Vector3Int(X, Y, Z); } }
         }
-       /// <summary>
+        /// <summary>
         /// Will return the position of the hex1 tile on the Grid map at the given coordinates
         /// </summary>
         /// <param name="x"></param>
@@ -262,10 +263,20 @@ namespace Assets.Scripts.WorldMap
         public List<Vector3> Vertices;
         public List<int> Triangles;
         public Vector2[] BaseUV;
-        
+
         List<Vector3> SlopeVertices;
         List<int> SlopeTriangles;
         public List<Vector2> SlopeUV;
+
+        /// <summary>
+        /// Quick access to the X coordinates of the tile
+        /// </summary>
+        public int X { get { return GridCoordinates.x; } }
+
+        /// <summary>
+        /// Quick access to the Y coordinates of the tile
+        /// </summary>
+        public int Y { get { return GridCoordinates.y; } }
 
 
         public GridManager Grid { get; set; }
@@ -284,7 +295,7 @@ namespace Assets.Scripts.WorldMap
             SlopeVertices = new List<Vector3>(4);
             SlopeTriangles = new List<int>(6);
 
-            SlopeUV = new List<Vector2>();
+            SlopeUV = new List<Vector2>(28);
 
             this.Grid = grid;
 
@@ -293,8 +304,6 @@ namespace Assets.Scripts.WorldMap
 
             float y = random.NextFloat(0, hexSettings.maxHeight);
 
-            Console.WriteLine($"Random Number: {y}");
-            
             Position = GetPosition(x, y, z);
 
             CreateBaseMesh();
@@ -305,57 +314,49 @@ namespace Assets.Scripts.WorldMap
 
         public static void CreateSlopes(Dictionary<Axial, HexTile> hexes)
         {
-            foreach (HexTile hex in hexes.Values)
+            Parallel.ForEach(hexes.Values, (hexTile) =>
             {
-                hex.CreateSlopeMesh();
-            }
-        }
+                hexTile.CreateSlopeMesh();
+            });
 
+        }
 
         public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, GridManager grid)
         {
             int initCapacity = MapSize.x * MapSize.y + 10;
             int numProcs = Environment.ProcessorCount;
             int concurrencyLevel = numProcs * 2;
-            
-            ConcurrentDictionary<Axial, HexTile> tempHexTiles = new ConcurrentDictionary<Axial, HexTile>( concurrencyLevel, initCapacity);
 
-            int pass = 0;
+            ConcurrentDictionary<Axial, HexTile> tempHexTiles = new ConcurrentDictionary<Axial, HexTile>(concurrencyLevel, initCapacity);
+
             int fail = 0;
-            
+
             Parallel.For(0, MapSize.x, x =>
             {
                 for (int z = 0; z < MapSize.y; z++)
                 {
                     HexTile hc = new HexTile(grid, x, z);
 
-                    bool test = tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
+                    bool fal = tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
 
-                    if (!test)
+                    if (!fal)
                     {
                         fail++;
                     }
-                    else
-                    {
-                        pass++;
-                    }
-
                 }
             });
-            
+
+            Debug.Log("Number of Failures: " + fail);
+
             return new Dictionary<Axial, HexTile>(tempHexTiles);
         }
 
         public void CreateBaseMesh()
         {
-            Triangles.AddRange(SetInnerTriangles(Vertices.Count));
+            Triangles = hexSettings.BaseTrianges();
 
-            // Add the vertices
-            for (int i = 0; i < 6; i++)
-            {
-                Vertices.Add(InnerVertexPosition(i));
-            }
-        } 
+            Vertices = hexSettings.VertexCorners;
+        }
 
         /// <summary>
         /// Will create an outer hex1 surrounding the inner hex1. This should be called immediatel after creating the inner hex1
@@ -376,8 +377,11 @@ namespace Assets.Scripts.WorldMap
         // To Do update this to use Y position
         public void CreateSlopeMesh()
         {
-            // slope mesh will start from outer hex1 vertices and slope towards inner hex1 vertice
-            int[] sideLink = { 5, 0, 1 };
+            if(hexSettings.stepDistance == 0)
+            {
+                // there are no slopes
+                return;
+            }
 
             SlopeVertices.Clear();
             SlopeTriangles.Clear();
@@ -392,8 +396,6 @@ namespace Assets.Scripts.WorldMap
                 {
                     continue;
                 }
-
-                (int, int, int) data = OppositeCorners[i];
 
                 // p1 and p2 denote the 2 points on the current i side in clockwise order
 
@@ -437,9 +439,8 @@ namespace Assets.Scripts.WorldMap
 
                 HexTile hex2 = surroundingHex[nextSide];
 
-                Vector3 center = Vector3.positiveInfinity;
-                Vector3 IPos3 = Vector3.positiveInfinity;
-
+                Vector3 center;
+                Vector3 IPos3;
 
                 if (hex2 != null && true)
                 {
@@ -464,7 +465,7 @@ namespace Assets.Scripts.WorldMap
                     SlopeVertices.Add(IPos3); // sv + 4
                     SlopeVertices.Add(center); // sv + 5
 
-                   // SlopeUV.Add(new Vector2()
+                    // SlopeUV.Add(new Vector2()
 
                     SlopeTriangles.AddRange(new int[6] {
                         sv + 1, sv + 3, sv + 4,
@@ -493,8 +494,8 @@ namespace Assets.Scripts.WorldMap
             }
 
             return surroundingHexs;
-        }      
-        public Mesh DrawMesh(Vector3 position = default)
+        }
+        public Mesh DrawMesh()
         {
             mesh = new Mesh();
 
@@ -504,10 +505,8 @@ namespace Assets.Scripts.WorldMap
             mesh.vertices = CombineVertices().ToArray();
             mesh.triangles = CombineTriangles().ToArray();
             mesh.uv = CombineUV().ToArray();
-            
-            //SetHexMeshUVs();
+
             return mesh;
-            //mesh.RecalculateNormals();
         }
 
         public void SetHexMeshUVs()
@@ -572,7 +571,7 @@ namespace Assets.Scripts.WorldMap
             Vertices.Clear();
             Triangles.Clear();
             SlopeVertices.Clear();
-            SlopeTriangles.Clear();            
+            SlopeTriangles.Clear();
         }
 
         public Vector3 GetWorldVertexPosition(int index)

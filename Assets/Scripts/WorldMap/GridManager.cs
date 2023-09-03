@@ -16,6 +16,8 @@ using Unity.Jobs;
 using Unity.Collections;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -73,40 +75,36 @@ namespace Assets.Scripts.WorldMap
         public int ChunkSize;
 
         Stopwatch timer = new Stopwatch();
+        string formattedTime = "";
+        TimeSpan elapsedTime;
+        
         public void GenerateGridChunks()
         {
             timer.Start();
             HexTiles.Clear();
-
+            
             HexTiles = HexTile.CreatesHexes(MapSize, this);
+
+            Debug.Log("Creation Took : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
 
             HexTile.CreateSlopes(HexTiles);
 
+            Debug.Log("Slopes Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
+            
             UseChunks();
 
             timer.Stop();
 
-            TimeSpan elapsedTime = timer.Elapsed;
-            string formattedTime = $"{elapsedTime.Minutes}m : {elapsedTime.Seconds} s : {elapsedTime.Milliseconds} ms";
+            elapsedTime = timer.Elapsed;
+            
+            formattedTime = $"{elapsedTime.Minutes}m : {elapsedTime.Seconds} s : {elapsedTime.Milliseconds} ms";
 
             Debug.Log("Generation Took : " + formattedTime);
 
             timer.Reset();
         }
-        void createmesh()
-        {
-            hex = new HexTile(this, 0, 0);
-
-            hex.CreateBaseMesh();
-
-            hex.DrawMesh();
-        }
-
         private void CreateHexChunks()
         {
-            // create the appropriate amount of chunks to cover the whole map
-            DestroyChildren();
-
             hexChunks.Clear();
 
             // 6 for the base hex, 6 for each slope on each side of the hex
@@ -170,21 +168,17 @@ namespace Assets.Scripts.WorldMap
                 }
             }
             
-            Debug.Log("Chunk Size: " + ChunkSize);
-            Debug.Log("Chunk count: " + hexChunks.Count);
+            //Debug.Log("Chunk Size: " + ChunkSize);
+            //Debug.Log("Chunk count: " + hexChunks.Count);
         }
         public void UseChunks()
         {
             CreateHexChunks();
 
-            HexChunk hc;
-            
-            foreach (HexTile hexTile in HexTiles.Values)
-            {
-                hc = GetHexChunk(hexTile.GridCoordinates.x, hexTile.GridCoordinates.y);
+            AddHexToChunks();
 
-                hc.AddHex(hexTile);
-            }
+            Debug.Log("Adding To Chunk Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
+
 
             foreach (HexChunk chunk in hexChunks)
             {
@@ -195,25 +189,22 @@ namespace Assets.Scripts.WorldMap
         }
         private void GenerateHexObjects()
         {
+            // create the appropriate amount of chunks to cover the whole map
+            DestroyChildren();
+            
             foreach (HexChunk chunk in hexChunks)
             {
                 GameObject newChunk = Instantiate(hexChunkPrefab, hexParent.transform);
                 newChunk.GetComponent<MeshFilter>().mesh = chunk.mesh;
             }
         }
-        private HexChunk GetHexChunk(int x, int z)
+        private void AddHexToChunks()
         {
-            // base on the x and z coordinates of the hex, return the appropriate chunk index
-            
-            for (int i = 0; i < hexChunks.Count; i++)
+            Parallel.ForEach(HexTiles.Values, (hexTile) =>
             {
-                if (hexChunks[i].IsInChunk(x, z))
-                {
-                    return hexChunks[i];
-                }
-            }
+                hexChunks.First(h => h.IsInChunk(hexTile.X, hexTile.Y)).AddHex(hexTile); 
+            });
 
-            return null;
         }
         public HexTile GetHexTile(Axial coordinates)
         {

@@ -27,7 +27,7 @@ namespace Assets.Scripts.WorldMap
         /// <summary>
         /// The corners of the hex tile. Starting from the top center corner and going clockwise
         /// </summary>
-        [NonSerialized] public Vector3[] VertexCorners;
+        [NonSerialized] public List<Vector3> VertexCorners;
         
         private void Awake()
         {
@@ -37,7 +37,7 @@ namespace Assets.Scripts.WorldMap
         {
             innerRadius = outerRadius * 0.866025404f;
 
-            VertexCorners = new Vector3[]
+            VertexCorners = new List<Vector3>
             {
                 new Vector3(0f, 0f, outerRadius),
                 new Vector3(innerRadius, 0f, 0.5f * outerRadius),
@@ -45,7 +45,7 @@ namespace Assets.Scripts.WorldMap
                 new Vector3(0f, 0f, -outerRadius),
                 new Vector3(-innerRadius, 0f, -0.5f * outerRadius),
                 new Vector3(-innerRadius, 0f, 0.5f * outerRadius),
-                new Vector3(0f, 0f, outerRadius)
+               // new Vector3(0f, 0f, outerRadius)
             };
 
             HexSize = new Vector2(outerRadius * 2f + stepDistance, innerRadius * 2f + stepDistance);
@@ -66,7 +66,6 @@ namespace Assets.Scripts.WorldMap
                 };
             }
         }
-
         public Vector2[] GetSlopeUV(float height)
         {
             // this can be improved... by adding to the base UV
@@ -80,14 +79,12 @@ namespace Assets.Scripts.WorldMap
 
             return slopes;
         }
-
         public float CalculateHypotenuse(float sideA, float sideB)
         {
             // Calculate the length of the hypotenuse using the Pythagorean theorem
             float hypotenuse = Mathf.Sqrt(sideA * sideA + sideB * sideB);
             return hypotenuse;
         }
-
         public Vector2[] GetMidTriangleSlopeUV(float height)
         {
             Vector2[] slopes = GetSlopeUV(height);
@@ -121,7 +118,6 @@ namespace Assets.Scripts.WorldMap
 
             return newSlopes.ToArray();
         }
-
         public Vector2[] SlopeHexUV
         {
             get
@@ -138,6 +134,14 @@ namespace Assets.Scripts.WorldMap
                 };
             }
         }
+       
+        public List<int> BaseTrianges() => new List<int>
+        {
+            4, 5, 0,
+            4, 0, 1,
+            4, 1, 2,
+            4, 2, 3 
+        };
 
 #if UNITY_EDITOR
 

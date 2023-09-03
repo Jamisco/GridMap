@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ namespace Assets.Scripts.WorldMap
     public class HexChunk
     {
         public List<HexTile> hexes;
+        private ConcurrentBag<HexTile> conHexes;
         private List<SimplifiedHex> simpleHex;
 
         public Dictionary<int, List<HexTile>> hexRows
@@ -33,7 +35,11 @@ namespace Assets.Scripts.WorldMap
             ChunkBounds.ClampToBounds(aBounds);
 
             mesh = new Mesh();
-            hexes = new List<HexTile>();
+            hexes = new List<HexTile>(aBounds.size.x * aBounds.size.y);
+            
+            // the reason we use a concurrent bag is because it is thread safe
+            // thus you can add to it from multiple from threads
+            conHexes = new ConcurrentBag<HexTile>();
             simpleHex = new List<SimplifiedHex>();
         }
 
@@ -62,39 +68,25 @@ namespace Assets.Scripts.WorldMap
 
         public void AddHex(HexTile hex)
         {
-            hexes.Add(hex);
+            // the reason we use a concurrent bag is because it is thread safe
+            // thus you can add to it from multiple from threads
+            conHexes.Add(hex);
 
-            if (!hexRows.ContainsKey(hex.GridCoordinates.y))
-            {
-                hexRows.Add(hex.GridCoordinates.y, new List<HexTile>());
-                hexRows[hex.GridCoordinates.y].Add(hex);
-            }
-            else
-            {
-                hexRows[hex.GridCoordinates.y].Add(hex);
-            }
+            //if (!hexRows.ContainsKey(hex.GridCoordinates.y))
+            //{
+            //    hexRows.Add(hex.GridCoordinates.y, new List<HexTile>());
+            //    hexRows[hex.GridCoordinates.y].Add(hex);
+            //}
+            //else
+            //{
+            //    hexRows[hex.GridCoordinates.y].Add(hex);
+            //}
         }
         public void CombinesMeshes()
         {
+            hexes = conHexes.ToList();
             Simplify();
         }
-
-        private static Vector2[] HexUV
-        {
-            get
-            {
-                return new Vector2[]
-                {
-                    new Vector2(0.5f, 1),
-                    new Vector2(1, 0.75f),
-                    new Vector2(1, 0.25f),
-                    new Vector2(0.5f, 0),
-                    new Vector2(0, 0.25f),
-                    new Vector2(0, 0.75f)
-                };
-            }
-        }
-
         public void Simplify()
         {
             mesh = new Mesh();
