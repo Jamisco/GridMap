@@ -1,20 +1,17 @@
 ﻿
 using Assets.Scripts.Miscellaneous;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
+using System.IO;
 using System.Threading.Tasks;
-using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
 using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
 using static Assets.Scripts.WorldMap.Planet;
 using static FastNoiseLite;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
-using Vector4 = UnityEngine.Vector4;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -455,6 +452,49 @@ namespace Assets.Scripts.WorldMap
             Debug.Log(printer);
         }
 
+        public void InsertData(MapData data)
+        {
+            planetFractal = data.planetFractal;
+
+            // Land Values
+            LandSeed = data.LandSeed;
+            LandFrequemcy = data.LandFrequemcy;
+
+            LFractal = data.LFractal;
+            LNoise = data.LNoise;
+
+            landMultiplier = data.landMultiplier;
+            landLevelScale = data.landLevelScale;
+
+            landOffset = data.landOffset;
+
+            // Ocean Values
+            OceanSeed = data.OceanSeed;
+
+            OceanFrequemcy = data.OceanFrequemcy;
+
+            OFractal = data.OFractal;
+            ONoise = data.ONoise;
+
+            marineMultiplier = data.marineMultiplier;
+            marineLevelScale = data.marineLevelScale;
+
+            marineLevel = data.marineLevel;
+            oceanOffset = data.oceanOffset;
+
+            // Precipitation Values
+            minTemperature = data.minTemperature;
+            TemperatureMultiplier = data.TemperatureMultiplier;
+
+            // Precipitation Values
+            precipitationScale = data.PrecipitationScale;
+            minPrecipitation = data.minPrecipitation;
+            rainMultiplier = data.RainMultiplier;
+            pOffset = data.pOffset;
+            
+            
+        }
+
         public BiomeProperties GetBiomeProperties(int x, int y)
         {
             float temp = GetTemperature(x, y);
@@ -498,5 +538,134 @@ namespace Assets.Scripts.WorldMap
                 SurfaceType = surfaceType;
             }
         }
+
+        public struct MapData
+        {
+            public int planetFractal;
+
+            // Land Values
+            public int LandSeed;
+            public float LandFrequemcy;
+
+            public FractalType LFractal;
+            public NoiseType LNoise;
+
+            public float landMultiplier;
+            public float landLevelScale;
+
+            public Vector2Int landOffset;
+
+            // Ocean Values
+            public int OceanSeed;
+
+            public float OceanFrequemcy;
+
+            public FractalType OFractal;
+            public NoiseType ONoise;
+
+            public float marineMultiplier;
+            public float marineLevelScale;
+
+            public float marineLevel;
+            public Vector2Int oceanOffset;
+
+            // Temperature Values
+            public float minTemperature;
+            public float TemperatureMultiplier;
+
+            // Precipitation Values
+            public float PrecipitationScale;
+            public float minPrecipitation;
+            public float RainMultiplier;
+            public Vector2Int pOffset;
+
+            public MapData(PlanetGenerator planet)
+            {
+                planetFractal = planet.planetFractal;
+
+                // Land Values
+                LandSeed = planet.LandSeed;
+                LandFrequemcy = planet.LandFrequemcy;
+
+                LFractal = planet.LFractal;
+                LNoise = planet.LNoise;
+
+                landMultiplier = planet.landMultiplier;
+                landLevelScale = planet.landLevelScale;
+
+                landOffset = planet.landOffset;
+
+                // Ocean Values
+                OceanSeed = planet.OceanSeed;
+
+                OceanFrequemcy = planet.OceanFrequemcy;
+
+                OFractal = planet.OFractal;
+                ONoise = planet.ONoise;
+
+                marineMultiplier = planet.marineMultiplier;
+                marineLevelScale = planet.marineLevelScale;
+
+                marineLevel = planet.marineLevel;
+                oceanOffset = planet.oceanOffset;
+
+                // Temperature Values
+
+                minTemperature = planet.minTemperature;
+                TemperatureMultiplier = planet.TemperatureMultiplier;
+
+                // Precipitation Values
+                PrecipitationScale = planet.precipitationScale;
+                minPrecipitation = planet.minPrecipitation;
+                RainMultiplier = planet.rainMultiplier;
+                pOffset = planet.pOffset;
+            }
+
+        }
+
+#if UNITY_EDITOR
+
+        // create custom editor class
+
+        [CustomEditor(typeof(PlanetGenerator))]
+
+        public class PlanetGridEditor : Editor
+        {
+            public override void OnInspectorGUI()
+            {
+                DrawDefaultInspector();
+
+                PlanetGenerator myScript = (PlanetGenerator)target;
+
+                if (GUILayout.Button("Save Planet Data"))
+                {
+                    MapData data = new MapData(myScript);
+                    
+                    string planetData = JsonUtility.ToJson(data, true);
+
+                    File.WriteAllText(UniversalData.MapDataSavePath, planetData);
+                }
+
+                if (GUILayout.Button("Insert Saved Data"))
+                {
+
+                    if (File.Exists(UniversalData.MapDataSavePath) == false)
+                    {
+                        Debug.LogError("No Map Data File Found");
+                        return;
+                    }
+                    
+                    string planetData = File.ReadAllText(UniversalData.MapDataSavePath);
+
+                    MapData data = JsonUtility.FromJson<MapData>(planetData);
+
+                    myScript.InsertData(data);
+                }
+            }
+
+            
+        }
+
+#endif
     }
 }

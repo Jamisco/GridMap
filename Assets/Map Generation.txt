@@ -1,0 +1,70 @@
+{
+    "planetFractal": 1,
+    "LandSeed": 1353,
+    "LandFrequemcy": 0.009999999776482582,
+    "LFractal": 3,
+    "LNoise": 3,
+    "landMultiplier": 1.0,
+    "landLevelScale": 0.8799999952316284,
+    "landOffset": {
+        "x": 0,
+        "y": 0
+    },
+    "OceanSeed": 1337,
+    "OceanFrequemcy": 0.009999999776482582,
+    "OFractal": 1,
+    "ONoise": 3,
+    "marineMultiplier": 0.0,
+    "marineLevelScale": 0.0,
+    "marineLevel": 0.0,
+    "oceanOffset": {
+        "x": 0,
+        "y": 0
+    }
+}{
+    "planetFractal": 1,
+    "LandSeed": 1353,
+    "LandFrequemcy": 0.009999999776482582,
+    "LFractal": 3,
+    "LNoise": 3,
+    "landMultiplier": 1.0,
+    "landLevelScale": 0.8799999952316284,
+    "landOffset": {
+        "x": 0,
+        "y": 0
+    },
+    "OceanSeed": 1337,
+    "OceanFrequemcy": 0.009999999776482582,
+    "OFractal": 1,
+    "ONoise": 3,
+    "marineMultiplier": 0.0,
+    "marineLevelScale": 0.0,
+    "marineLevel": 0.0,
+    "oceanOffset": {
+        "x": 0,
+        "y": 0
+    }
+}{
+    "planetFractal": 1,
+    "LandSeed": 1353,
+    "LandFrequemcy": 0.009999999776482582,
+    "LFractal": 3,
+    "LNoise": 3,
+    "landMultiplier": 1.0,
+    "landLevelScale": 0.8799999952316284,
+    "landOffset": {
+        "x": 0,
+        "y": 0
+    },
+    "OceanSeed": 1337,
+    "OceanFrequemcy": 0.009999999776482582,
+    "OFractal": 1,
+    "ONoise": 3,
+    "marineMultiplier": 0.0,
+    "marineLevelScale": 0.0,
+    "marineLevel": 0.0,
+    "oceanOffset": {
+        "x": 0,
+        "y": 0
+    }
+}

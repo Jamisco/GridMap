@@ -1,0 +1,33 @@
+{
+    "planetFractal": 1,
+    "LandSeed": 1411,
+    "LandFrequemcy": 0.009999999776482582,
+    "LFractal": 3,
+    "LNoise": 3,
+    "landMultiplier": 1.659999966621399,
+    "landLevelScale": 1.309999942779541,
+    "landOffset": {
+        "x": 0,
+        "y": 0
+    },
+    "OceanSeed": 1337,
+    "OceanFrequemcy": 0.009999999776482582,
+    "OFractal": 1,
+    "ONoise": 3,
+    "marineMultiplier": 1.0,
+    "marineLevelScale": 0.0,
+    "marineLevel": 0.0,
+    "oceanOffset": {
+        "x": 0,
+        "y": 0
+    },
+    "minTemperature": 0.0,
+    "TemperatureMultiplier": 1.0,
+    "PrecipitationScale": 1.0,
+    "minPrecipitation": 0.0,
+    "RainMultiplier": 1.0,
+    "pOffset": {
+        "x": 0,
+        "y": 0
+    }
+}
