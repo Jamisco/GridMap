@@ -5,11 +5,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 using static Assets.Scripts.Miscellaneous.HexFunctions;
+using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
 using static Assets.Scripts.WorldMap.GridManager;
+using static Assets.Scripts.WorldMap.Planet;
 using Random = System.Random;
 
 namespace Assets.Scripts.WorldMap
@@ -93,7 +94,7 @@ namespace Assets.Scripts.WorldMap
         /// <summary>
         /// A coordinate system for hexagonal Grids that uses three axes, X, Y, and Z. The X-axis points southeast, the Y-axis points south, and the Z-axis points southwest. The sum of the three axial coordinates should always be 0. Used to overcome the offset of the hexagonal Grid.
         /// </summary>
-        public struct Axial : IEquatable<Axial>
+        public struct Axial : IEquatable<Axial>, IComparable<Axial>
         {
             public int X;
             public int Y;
@@ -194,6 +195,12 @@ namespace Assets.Scripts.WorldMap
                 return Coordinates.ToString();
             }
 
+            public int CompareTo(Axial other)
+            {
+                int compareY = X.CompareTo(other.X);
+                return compareY == 0 ? Z.CompareTo(other.Z) : compareY;
+            }
+
             public static Axial operator +(Axial coord1, Axial coord2)
             {
                 return (Axial)(coord1.Coordinates + coord2.Coordinates);
@@ -268,7 +275,13 @@ namespace Assets.Scripts.WorldMap
         List<int> SlopeTriangles;
         public List<Vector2> SlopeUV;
 
-        public Texture2D HexTexture;
+        public BiomeProperties HexBiomeProperties 
+        {   
+            get 
+            {
+                return Planet.GetBiomeProperties(X, Y);
+            } 
+        }
 
         /// <summary>
         /// Quick access to the X coordinates of the tile
@@ -281,15 +294,15 @@ namespace Assets.Scripts.WorldMap
         public int Y { get { return GridCoordinates.y; } }
 
 
-        public GridManager Grid { get; set; }
-
+        public static GridManager Grid { get; set; }
+        public static PlanetGenerator Planet;
         public Mesh HexMesh { get { return mesh; } }
 
         // We should pass the planet instead
 
         static Random random = new Random();
 
-        public HexTile(GridManager grid, int x, int z)
+        public HexTile(int x, int z)
         {
             Vertices = new List<Vector3>(6);
             Triangles = new List<int>(12);
@@ -298,8 +311,6 @@ namespace Assets.Scripts.WorldMap
             SlopeTriangles = new List<int>(6);
 
             SlopeUV = new List<Vector2>(28);
-
-            this.Grid = grid;
 
             AxialCoordinates = Axial.ToAxial(x, z);
             GridCoordinates = new Vector2Int(x, z);
@@ -323,7 +334,7 @@ namespace Assets.Scripts.WorldMap
 
         }
 
-        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, GridManager grid, PlanetGenerator planet)
+        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize)
         {
             int initCapacity = MapSize.x * MapSize.y + 10;
             int numProcs = Environment.ProcessorCount;
@@ -335,10 +346,8 @@ namespace Assets.Scripts.WorldMap
             {
                 for (int z = 0; z < MapSize.y; z++)
                 {
-                    HexTile hc = new HexTile(grid, x, z);
+                    HexTile hc = new HexTile(x, z);
 
-                    Texture2D aText = planet.GetBiomeTextureLand(x, z);
-                    hc.SetTexture(aText);
                     tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
                 }
             });
@@ -492,7 +501,14 @@ namespace Assets.Scripts.WorldMap
         }
         public Mesh DrawMesh()
         {
-            mesh = new Mesh();
+            if (mesh == null)
+            {
+                mesh = new Mesh();
+            }
+            else
+            {
+                return mesh;
+            }
 
             //mesh.vertices = CombineVertices().ToArray();
             //mesh.triangles = CombineTriangles().ToArray();
@@ -504,10 +520,27 @@ namespace Assets.Scripts.WorldMap
             return mesh;
         }
 
-        public void SetTexture(Texture2D texture)
+        public Color[] MeshColors()
         {
-            HexTexture = texture;
+            Color[] colors = new Color[Vertices.Count];
+
+            for (int i = 0; i < colors.Length; i++)
+            {
+
+                colors[i] = Planet.GetBiomeProperties(X, Y).BiomeColor;
+            }
+
+            return colors;
         }
+
+        public void SetMaterialProperty()
+        {
+            if (mesh == null)
+            {
+                return;
+            }
+        }
+    
 
         /// higher values the smaller the mapping wll be
         private float mul = 3;

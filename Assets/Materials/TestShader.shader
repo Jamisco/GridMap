@@ -6,12 +6,14 @@
         _Texture1("Texture", 2D) = "white" {}
         _Texture2("Texture", 2D) = "white" {}
         
+        _UseColor("UseColor", Float) = 0
         _Color ("Color", Color) = (1,1,1,1)
+        
         _HeightColor("HeightColor", Vector) = (1,10,0,0)
         _HeightRange("HeightRange", Vector) = (0,5, 0,0)
         
-        _Text2Lerp("Texture2Blend", Range(0,1)) = 0.5
-        _Text3Lerp("Texture3Blend", Range(0,1)) = 0.5
+        _Text2Lerp("Texture2Blend", Range(0,1)) = 0
+        _Text3Lerp("Texture3Blend", Range(0,1)) = 0
         
     }
     
@@ -31,6 +33,7 @@
             #pragma vertex vert
             #pragma fragment frag
        
+            float _UseColor;
             float4 _Color;
             
             float2 _HeightColor;
@@ -54,7 +57,7 @@
                 float4 pos : SV_POSITION;
                 float4 color : COLOR;
                 float2 uv : TEXCOORD0;
-                float y: float;
+                float y : float;
             };
             
             float2 hash2D2D (float2 s)
@@ -99,9 +102,6 @@
                 o.uv = v.uv;
                 o.color = v.color;
                 
-                //_HeightRange = mul(unity_ObjectToWorld, float4(_HeightRange.x, _HeightRange.y, 0, 0));
-                
-                //_HeightColor = mul(unity_ObjectToWorld, float4(_HeightColor, 0, 0));
                 o.y = mul(unity_ObjectToWorld, v.vertex).y;
                 
                 return o;
@@ -109,6 +109,12 @@
 
             fixed4 frag(v2f i) : SV_Target 
             {          
+            
+                if(_UseColor == 1)
+				{
+					return i.color * _Color;
+				}
+                
                 fixed4 col1 = tex2D(_MainTex, i.uv);
                 fixed4 col2 = tex2D(_Texture1, i.uv);
                 fixed4 col3 = tex2D(_Texture2, i.uv);
@@ -122,8 +128,6 @@
                 //float4 stoch = tex2DStochastic(_MainTex, i.uv);
                 
                 //float4 col = stoch;
-
-                col *= i.color * _Color;
                 
                 fixed4 ay = (_HeightColor.y - _HeightColor.x) * ((i.y - _HeightRange.x) / (_HeightRange.y - _HeightRange.x)) + _HeightColor.x;
                 

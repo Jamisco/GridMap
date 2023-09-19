@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,8 +9,11 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-using static Assets.Scripts.Miscellaneous.HexFunctions;
-using static UnityEngine.Rendering.DebugUI.Table;
+using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
+using static Assets.Scripts.WorldMap.GridManager;
+using static Assets.Scripts.WorldMap.HexTile;
+using static UnityEditor.FilePathAttribute;
+using Debug = UnityEngine.Debug;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -32,6 +36,9 @@ namespace Assets.Scripts.WorldMap
         public BoundsInt ChunkBounds;
 
         public static Material MainMaterial;
+        public static Material InstanceMaterial;
+        
+        public static BiomeVisual BiomeVisual;
         public HexChunk(BoundsInt aBounds)
         {
             ChunkBounds = aBounds;
@@ -68,46 +75,117 @@ namespace Assets.Scripts.WorldMap
 
             return false;
         }
-
-        Dictionary<Texture2D, List<CombineInstance>> subMeshes = new Dictionary<Texture2D, List<CombineInstance>>();
         public void AddHex(HexTile hex)
         {
             // the reason we use a concurrent bag is because it is thread safe
             // thus you can add to it from multiple from threads
 
             conHexes.Add(hex);
-
-
         }
+
+        Dictionary<BiomeProperties, List<CombineInstance>> subMeshes = new Dictionary<BiomeProperties, List<CombineInstance>>();
         public void CombinesMeshes()
         {
+            subMeshes.Clear();
             hexes = conHexes.ToList();
             Simplify();
+
+            //hexes.Sort((a, b) =>
+            //{
+            //    int compareY = a.Y.CompareTo(b.Y);
+            //    return compareY == 0 ? a.X.CompareTo(b.X) : compareY;
+            //});
+
+            //hexes = hexes.OrderBy(o => o.AxialCoordinates).ToList();
         }
-        public void Simplify()
+
+        public void DrawImmediate()
         {
+            subMeshes.Clear();
+            hexes = conHexes.ToList();
+            DrawMesh();
+        }
+
+        List<CombineInstance> instances = new List<CombineInstance>();
+        private void DrawMesh()
+        {
+            Material newMat;
+            RenderParams rp;
+            MaterialPropertyBlock block;
+            
             mesh = new Mesh();
-
-            CombineInstance[] combine = new CombineInstance[hexes.Count];
-
-            List<CombineInstance> tempCombine = new List<CombineInstance>();
+         
             CombineInstance instance;
 
             for (int i = 0; i < hexes.Count; i++)
             {
+                instance = new CombineInstance();
+                
+                instance.mesh = hexes[i].DrawMesh();
+                instance.transform = Matrix4x4.Translate(hexes[i].Position);
+                instances.Add(instance);
+                
+                newMat = new Material(MainMaterial);
+                Color color = hexes[i].HexBiomeProperties.BiomeColor;
+
+                block = new MaterialPropertyBlock();
+
+                block.SetFloat("_UseColor", 1);
+                block.SetColor("_Color", color);
+
+                blocks.Add(block);
+                materials.Add(newMat);
+            }
+
+            mesh.CombineMeshes(instances.ToArray(), false, true);
+            mesh.MarkDynamic();
+        }
+
+        public void UpdateMaterialBlock(ref Renderer renderer)
+        {
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                renderer.GetPropertyBlock(blocks[i]);
+                
+                blocks[i].SetFloat("_UseColor", 1);
+                blocks[i].SetColor("_Color", hexes[i].HexBiomeProperties.BiomeColor);
+                
+                renderer.SetPropertyBlock(blocks[i], i);
+            }
+        }
+        private void Simplify()
+        {
+            mesh = new Mesh();
+            subMeshes.Clear();
+            
+            List<CombineInstance> tempCombine = new List<CombineInstance>();
+            CombineInstance instance;
+
+            // split and store the meshes into submeshes based on their biome
+            for (int i = 0; i < hexes.Count; i++)
+            {
                 HexTile hex = hexes[i];               
 
-                subMeshes.TryGetValue(hex.HexTexture, out tempCombine);
+                subMeshes.TryGetValue(hex.HexBiomeProperties, out tempCombine);
 
                 if(tempCombine == null)
                 {
                     tempCombine = new List<CombineInstance>();
-                    subMeshes.Add(hex.HexTexture, tempCombine);
+                    subMeshes.Add(hex.HexBiomeProperties, tempCombine);
                 }
 
                 instance = new CombineInstance();
                 
                 instance.mesh = hex.DrawMesh();
+
+                List<Color> colors = new List<Color>();
+
+                for (int c = 0; c < instance.mesh.vertexCount; c++)
+                {
+                    colors.Add(hex.HexBiomeProperties.BiomeColor);
+                }
+
+                instance.mesh.SetColors(colors);
 
                 instance.transform = Matrix4x4.Translate(hexes[i].Position);
                 tempCombine.Add(instance);
@@ -118,6 +196,7 @@ namespace Assets.Scripts.WorldMap
 
             List<CombineInstance> prelist = new List<CombineInstance>();
 
+            // combine all the meshes of thesame biome into one
             foreach (List<CombineInstance> item in subMeshes.Values)
             {
                 CombineInstance subInstance = new CombineInstance();
@@ -126,22 +205,158 @@ namespace Assets.Scripts.WorldMap
                 preMesh.CombineMeshes(item.ToArray());
 
                 subInstance.mesh = preMesh;
-
+                
                 prelist.Add(subInstance);
             }
 
             mesh.CombineMeshes(prelist.ToArray(), false, false);
-            SetMaterials();
+            SetMaterialProperties();
         }
 
-
         public List<Material> materials = new List<Material>();
-        private void SetMaterials()
+
+        RenderParams renderParams = new RenderParams(MainMaterial);
+        private void SetMaterialProperties()
         {
-            for(int i = 0; i < subMeshes.Count; i++)
+            if (BiomeVisual == BiomeVisual.Color)
+            {
+                SetMaterialColor();
+            }
+            else
+            {
+                SetMaterialTexture();
+            }
+        }
+
+        List<MaterialPropertyBlock> blocks = new List<MaterialPropertyBlock>();
+        public void SetMaterialPropertyBlocks(ref Renderer renderer)
+        {
+            int count = renderer.materials.Length;
+
+            if (blocks.Count != count)
+            {
+                renderer.materials = materials.ToArray();
+            }
+
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                renderer.SetPropertyBlock(blocks[i], i);
+            }
+        }
+
+        Matrix4x4 zero = Matrix4x4.Translate(Vector3.zero);
+        public struct MyInstanceData
+        {
+            public Matrix4x4 objectToWorld; // We must specify object-to-world transformation for each instance
+            public uint renderingLayerMask; // In addition we also like to specify rendering layer mask per instence.
+
+            public int hexIndex;
+        };
+
+        // the limit is 500
+        int maxLimit = 500;
+
+        List<List<MyInstanceData>> data2 = new List<List<MyInstanceData>>();
+        MyInstanceData[] data;
+        private void SetData()
+        {
+            // Data
+            data = new MyInstanceData[hexes.Count];
+            data2.Clear();
+
+            Parallel.For(0, hexes.Count, x =>
+            {
+                MyInstanceData d = new MyInstanceData();
+                d.objectToWorld = Matrix4x4.Translate(hexes[x].Position);
+                d.renderingLayerMask = 0;
+
+                d.hexIndex = x;
+                data[x] = d;
+            });
+
+            while (data.Any())
+            {
+                data2.Add(data.Take(maxLimit).ToList());
+                
+                data = data.Skip(maxLimit).ToArray();
+            }
+        }
+
+        List<List<Vector4>> color2 = new List<List<Vector4>>();
+        private void SetColor()
+        {
+            color2.Clear();
+            Vector4[] aColor;
+            // Color
+            foreach (List<MyInstanceData> item in data2)
+            {
+                aColor = new Vector4[item.Count];
+
+                Parallel.For(0, item.Count, x =>
+                {
+                    aColor[x] = 
+                    hexes[item[x].hexIndex].HexBiomeProperties.BiomeColor;
+                });
+
+                color2.Add(aColor.ToList());
+            }
+        }
+
+        RenderParams instanceParam = new RenderParams(InstanceMaterial);
+        Mesh instanceMesh;
+        MaterialPropertyBlock instanceBlock;
+        public void RenderMesh()
+        {
+            if (data2.Count == 0)
+            {
+                SetData();
+                instanceMesh = hexes[0].DrawMesh();
+            }
+
+            SetColor();
+
+            int i = 0;
+
+            foreach (List<MyInstanceData> item in data2)
+            {
+                instanceBlock = new MaterialPropertyBlock();
+
+                Vector4[] v = color2.ElementAt(i).ToArray();
+
+                instanceBlock.SetVectorArray("_MeshColors", v);
+                instanceParam.matProps = instanceBlock;
+
+                Graphics.RenderMeshInstanced(instanceParam, instanceMesh, 0, item);
+
+                i++;
+            }
+        }
+        private void SetMaterialColor()
+        {
+            for (int i = 0; i < subMeshes.Count; i++)
             {
                 Material newMat = new Material(MainMaterial);
-                newMat.SetTexture("_MainTex", subMeshes.Keys.ElementAt(i));
+                Color color = subMeshes.Keys.ElementAt(i).BiomeColor;
+
+                MaterialPropertyBlock block = new MaterialPropertyBlock();
+
+                block.SetFloat("_UseColor", 1);
+                block.SetColor("_Color", color);
+
+                blocks.Add(block);
+
+                materials.Add(newMat);
+            }
+        }
+        private void SetMaterialTexture()
+        {
+            for (int i = 0; i < subMeshes.Count; i++)
+            {
+                Material newMat = new Material(MainMaterial);
+
+                Texture2D texture = subMeshes.Keys.ElementAt(i).BiomeTexture;
+                
+                newMat.SetTexture("_MainTex", texture);
 
                 materials.Add(newMat);
             }

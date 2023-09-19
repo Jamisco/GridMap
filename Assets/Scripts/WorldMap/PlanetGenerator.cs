@@ -6,14 +6,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading.Tasks;
-using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
 using static Assets.Scripts.WorldMap.Planet;
 using static FastNoiseLite;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
+using Vector4 = UnityEngine.Vector4;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -62,10 +63,14 @@ namespace Assets.Scripts.WorldMap
         [SerializeField] private NoiseType ONoise = NoiseType.Perlin;
 
         [Range(0, 10)]
-        [SerializeField] float oceanMultiplier;
+        [SerializeField] float marineMultiplier;
         [Range(0, 10)]
-        [SerializeField] float oceanLevelScale;
-        
+        [SerializeField] float marineLevelScale;
+
+        [Tooltip("This denotes the level at which the ocean ends. Ocean starts from 0")]
+        [Range(0,1)]
+        [SerializeField] float marineLevel;
+
         [SerializeField] Vector2Int oceanOffset;
 
 
@@ -106,7 +111,6 @@ namespace Assets.Scripts.WorldMap
             if (RandomBiomeColor == true)
             {
                 RandomBiomeColor = false;
-                MainPlanet.RandomizeBiome();
             }
 
             UpdateNoise();
@@ -124,12 +128,14 @@ namespace Assets.Scripts.WorldMap
             PlanetPrecipitation = new float[MainPlanet.PlanetSize.x, MainPlanet.PlanetSize.y];
             PlanetSurface = new float[MainPlanet.PlanetSize.x, MainPlanet.PlanetSize.y];
             PlanetOcean = new float[MainPlanet.PlanetSize.x, MainPlanet.PlanetSize.y];
+
             // clear arrays first
 
             LandStore.Clear();
             PrecipitationStore.Clear();
             TemperatureStore.Clear();
             OceanStore.Clear();
+            
 
             for (int i = 0; i < 11; i++)
             {
@@ -154,8 +160,11 @@ namespace Assets.Scripts.WorldMap
 
         float[,] PlanetTemperature;
         float[,] PlanetPrecipitation;
+        
         public void ComputeBiomeNoise()
-        { 
+        {
+            //test.Restart();
+            
             Parallel.For(0, MainPlanet.PlanetSize.x, x =>
             {
                 for (int y = 0; y < MainPlanet.PlanetSize.y; y++)
@@ -167,7 +176,10 @@ namespace Assets.Scripts.WorldMap
                 }
             });
 
-            RandomizeTemp();       
+            test.Stop();
+
+           // Debug.Log("ComputeBiomeNoise Took: " + test.ElapsedMilliseconds / 1000f + "s");
+
         }
 
         private void ComputeTemperatureNoise(int x, int y)
@@ -195,10 +207,6 @@ namespace Assets.Scripts.WorldMap
                     PlanetTemperature[x, y] = temp;
                 }
             }
-
-            test.Stop();
-
-            UnityEngine.Debug.Log("Randomize Took: " + test.Elapsed.TotalSeconds.ToString("0.00"));
         }
 
         private Random deviator = new Random();
@@ -346,7 +354,7 @@ namespace Assets.Scripts.WorldMap
 
             tempNoise = ExtensionMethods.Normalize(tempNoise, -1, 1, 0, 1);
 
-            tempNoise *= oceanMultiplier;
+            tempNoise *= marineMultiplier;
 
             DistributionOfValues(3, tempNoise);
             PlanetOcean[x, y] = tempNoise;
@@ -368,38 +376,8 @@ namespace Assets.Scripts.WorldMap
             return Mathf.PerlinNoise(x, y);
         }
 
-        public Color GetBiomeColor(int x, int y)
-        {
-            float temp, precip;
 
-            temp = PlanetTemperature[x, y];
-            precip = PlanetPrecipitation[x, y];
 
-            Biome biome = MainPlanet.GetBiome(temp, precip);
-
-            return MainPlanet.GetColor(biome);
-        }
-        public Texture2D GetBiomeTexture(int x, int y)
-        {
-            float temp, precip;
-
-            temp = PlanetTemperature[x, y];
-            precip = PlanetPrecipitation[x, y];
-
-            Biome biome = MainPlanet.GetBiome(temp, precip);
-
-            return MainPlanet.GetTexture(biome);
-        }
-
-        public Texture2D GetBiomeTextureLand(int x, int y)
-        {
-            float land, ocean;
-
-            land = PlanetSurface[x, y];
-            ocean = PlanetOcean[x, y];
-
-            return MainPlanet.GetLandTexture(land, ocean);
-        }
         private void DistributionOfValues(int arrayType, float value)
         {
             // initialize 10 array values
@@ -477,5 +455,48 @@ namespace Assets.Scripts.WorldMap
             Debug.Log(printer);
         }
 
+        public BiomeProperties GetBiomeProperties(int x, int y)
+        {
+            float temp = GetTemperature(x, y);
+            float precip = GetPrecipitation(x, y);
+            
+            float land = GetLand(x, y);
+            float ocean = GetOcean(x, y);
+
+            SurfaceType surfaceType;
+            float surface = 0;
+            
+            if(ocean > land)
+            {
+                surfaceType = SurfaceType.Marine;
+                surface = ocean;
+            }
+            else
+            {
+                surfaceType = SurfaceType.Terrestrial;
+                surface = land;
+            }
+
+            GridValues gridValues = new GridValues(temp, precip, surface, surfaceType);
+
+            return MainPlanet.GetBiomeProperties(gridValues);
+        }
+
+        public struct GridValues
+        {
+            public float Temperature;
+            public float Precipitation;
+            public float Surface;
+            
+            public SurfaceType SurfaceType;
+
+            public GridValues(float temp, float precip, float surface, SurfaceType surfaceType)
+            {
+                Temperature = temp;
+                Precipitation = precip;
+                Surface = surface;
+                SurfaceType = surfaceType;
+            }
+        }
     }
 }

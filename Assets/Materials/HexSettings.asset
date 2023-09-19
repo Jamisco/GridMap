@@ -17,6 +17,6 @@ MonoBehaviour:
   outerHexMultiplier: 0
   stepDistance: 0
   outerHexSize: 0
-  maxHeight: 2
+  maxHeight: 0
   InnerHighlightColor: {r: 0.9133022, g: 1, b: 0, a: 0.59607846}
   OuterHighlightColor: {r: 0.9433962, g: 0.07564971, b: 0.07564971, a: 0.56078434}
