@@ -3,7 +3,9 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -126,14 +128,14 @@ namespace Assets.Scripts.WorldMap
             /// <summary>
             /// Converts a position to axial coordinates. Returns Axial Struct
             /// </summary>
-            /// <param name="pos">Non Axial Coordinate to convert</param>
+            /// <param name="pos">Non Axial Coordinate to convert. The Y placeholds for the Z </param>
             /// <returns>returns a new Axial Class</returns>
-            public static Axial ToAxial(Vector3Int pos)
+            public static Axial ToAxial(Vector2Int pos)
             {
                 Axial a = new Axial();
                 a.X = pos.x - (pos.y - (pos.y & 1)) / 2;
-                a.Y = pos.y;
-                a.Z = -a.X - a.Y;
+                a.Y = -a.X - pos.y;
+                a.Z = pos.y;
                 return a;
             }
 
@@ -230,11 +232,92 @@ namespace Assets.Scripts.WorldMap
         public static Vector3 GetPosition(int x, float y, int z)
         {
             Vector3 position;
+            // it looks thsame but i assure u, its differnt
             position.x = (x + (z * 0.5f) - (z / 2)) * (hexSettings.innerRadius * 2f) + (x * hexSettings.stepDistance);
             position.y = y;
             position.z = z * (hexSettings.outerRadius * 1.5f) + (z * hexSettings.stepDistance);
 
             return position;
+        }
+
+        public static Vector3 GetPosition(Vector3Int pos)
+        {
+            return GetPosition(pos.x, pos.y, pos.z);
+        }
+
+
+        private static float GetPositionZ(int z)
+        {
+            return z * (hexSettings.outerRadius * 1.5f) + (z * hexSettings.stepDistance);
+        }
+
+        /// <summary>
+        /// Be aware that this function is only accurate 80% of the time. Due to the nature of the hex grid, there are some cases where the function will return the wrong value because of offsets. Thus is it recommended to also get the surrounding tiles and check if the tile is actually the closest one.
+        /// </summary>
+        /// <param name="worldPosition"></param>
+        /// <returns></returns>
+        public static Vector2Int GetGridCoordinate(Vector3 worldPosition)
+        {
+            Vector3Int gridCoordinate = Vector3Int.zero;
+
+            float z = worldPosition.z / (hexSettings.outerRadius * 1.5f);
+
+            int minZ = Mathf.FloorToInt(z);
+            int maxZ = Mathf.CeilToInt(z);
+
+            int clozerZ = CloserZ();
+
+            float x = worldPosition.x / (hexSettings.innerRadius * 2f);
+
+            int minX = Mathf.FloorToInt(x);
+            int maxX = Mathf.CeilToInt(x);
+
+            int clozerX = CloserX();
+
+            return new Vector2Int(clozerX, clozerZ);
+
+            // we get the position of the 2 possible coordinates, then we compare the distance between the world position and the 2 coordinates
+            // the one with the smallest distance is the closest coordinate to the world position
+            int CloserZ()
+            {
+                float position = worldPosition.z;
+                float val1Pos = GetPositionZ(minZ);
+                float val2Pos = GetPositionZ(maxZ);
+
+                float val1Distance = Mathf.Abs(val1Pos - position);
+                float val2Distance = Mathf.Abs(val2Pos - position);
+
+                if (val1Distance < val2Distance)
+                {
+                    return minZ;
+                }
+                else
+                {
+                    return maxZ;
+                }
+            }
+
+            // we get the position of the 2 possible coordinates, then we compare the distance between the world position and the 2 coordinates
+            // the one with the smallest distance is the closest coordinate to the world position
+            // Since X position is dependent on Z position, we need to get the closest Z position first
+            int CloserX()
+            {
+                float position = worldPosition.x;
+                float val1Pos = GetPosition(minX, 0, clozerZ).x;
+                float val2Pos = GetPosition(maxX, 0, clozerZ).x;
+
+                float val1Distance = Mathf.Abs(val1Pos - position);
+                float val2Distance = Mathf.Abs(val2Pos - position);
+
+                if (val1Distance < val2Distance)
+                {
+                    return minX;
+                }
+                else
+                {
+                    return maxX;
+                }
+            }
         }
         /// <summary>
         /// Creates the four triangles that fill up a hexagon.
@@ -265,22 +348,29 @@ namespace Assets.Scripts.WorldMap
         public Vector2Int GridCoordinates;
         public Vector3 Position { get; set; }
 
-        Mesh mesh;
+        public List<Vector3> Vertices = new List<Vector3>(6);
+        public List<int> Triangles = new List<int>(12);
 
-        public List<Vector3> Vertices;
-        public List<int> Triangles;
+        List<Vector3> SlopeVertices = new List<Vector3>(4);
+        List<int> SlopeTriangles = new List<int>(6);
+
+        public List<Vector2> SlopeUV = new List<Vector2>(28);
+
+        Mesh mesh;
+        
         public Vector2[] BaseUV;
 
-        List<Vector3> SlopeVertices;
-        List<int> SlopeTriangles;
-        public List<Vector2> SlopeUV;
-
-        public BiomeProperties HexBiomeProperties 
+        private BiomeData _hexBiomeData;
+        public BiomeData HexBiomeData 
         {   
-            get 
-            {
-                return Planet.GetBiomeProperties(X, Y);
-            } 
+            get { return _hexBiomeData; }
+            set { _hexBiomeData = value; }
+        }
+
+        public BiomeData DefaultBiomeData
+        {
+            get { return Planet.GetBiomeProperties(X, Y); }
+            
         }
 
         /// <summary>
@@ -296,22 +386,12 @@ namespace Assets.Scripts.WorldMap
 
         public static GridManager Grid { get; set; }
         public static PlanetGenerator Planet;
-        public Mesh HexMesh { get { return mesh; } }
 
         // We should pass the planet instead
 
         static Random random = new Random();
-
         public HexTile(int x, int z)
         {
-            Vertices = new List<Vector3>(6);
-            Triangles = new List<int>(12);
-
-            SlopeVertices = new List<Vector3>(4);
-            SlopeTriangles = new List<int>(6);
-
-            SlopeUV = new List<Vector2>(28);
-
             AxialCoordinates = Axial.ToAxial(x, z);
             GridCoordinates = new Vector2Int(x, z);
 
@@ -322,7 +402,18 @@ namespace Assets.Scripts.WorldMap
             CreateBaseMesh();
             //CreateOuterHexMesh();
 
-            //DrawMesh();
+            //InitiateDrawProtocol();
+
+            SetBounds();
+
+            try
+            {
+                _hexBiomeData = DefaultBiomeData;
+            }
+            catch (Exception)
+            {
+                // this exception is here just in case the planet arrays have not been computed yet
+            }
         }
 
         public static void CreateSlopes(Dictionary<Axial, HexTile> hexes)
@@ -334,25 +425,92 @@ namespace Assets.Scripts.WorldMap
 
         }
 
-        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize)
+        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, ref List<HexChunk> hexChunks)
         {
-            int initCapacity = MapSize.x * MapSize.y + 10;
-            int numProcs = Environment.ProcessorCount;
-            int concurrencyLevel = numProcs * 2;
+            Dictionary<Axial, HexTile> hexTiles = new Dictionary<Axial, HexTile>(MapSize.x * MapSize.y + 10);
 
-            ConcurrentDictionary<Axial, HexTile> tempHexTiles = new ConcurrentDictionary<Axial, HexTile>(concurrencyLevel, initCapacity);
 
-            Parallel.For(0, MapSize.x, x =>
+            #region Parrallel forEach
+            //Parallel.ForEach(hexChunks, chunk =>
+            //{
+            //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
+            //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
+            //    int chunkBoundsYMin = chunk.ChunkBounds.yMin;
+            //    int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+
+            //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
+            //    {
+            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        {
+            //            HexTile hc = new HexTile(x, z);
+
+            //            hexTiles[hc.AxialCoordinates] = hc;
+
+            //            chunk.AddHex(hc);
+            //        }
+            //    }
+            //});
+
+            #endregion
+
+            #region Parrellel For
+
+            //List<HexChunk> chunky = hexChunks;
+
+            //Parallel.For(0, hexChunks.Count, chunkIndex =>
+            //{
+            //    HexChunk chunk = chunky[chunkIndex];
+            //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
+            //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
+            //    int chunkBoundsYMin = chunk.ChunkBounds.yMin;
+            //    int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+
+            //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
+            //    {
+            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        {
+            //            HexTile hc = new HexTile(x, z);
+
+            //            lock (hexTiles) // Ensure safe access to the dictionary
+            //            {
+            //                hexTiles[hc.AxialCoordinates] = hc;
+            //            }
+
+            //            chunk.AddHex(hc);
+            //        }
+            //    }
+            //});
+
+            #endregion
+
+
+            // It seems using a standard loop is about 30% - 50% faster than using parrallel.
+            // For a 1000 x 1000 grid
+            // For loop: 7 seconds
+            // Parrellel foreach/for 15 - 16 seconds
+
+            for (int chunkIndex = 0; chunkIndex < hexChunks.Count; chunkIndex++)
             {
-                for (int z = 0; z < MapSize.y; z++)
+                HexChunk chunk = hexChunks[chunkIndex];
+                int chunkBoundsXMin = chunk.ChunkBounds.xMin;
+                int chunkBoundsXMax = chunk.ChunkBounds.xMax;
+                int chunkBoundsYMin = chunk.ChunkBounds.yMin;
+                int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+
+                for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
                 {
-                    HexTile hc = new HexTile(x, z);
+                    for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+                    {
+                        HexTile hc = new HexTile(x, z);
 
-                    tempHexTiles.TryAdd(hc.AxialCoordinates, hc);
+                        hexTiles[hc.AxialCoordinates] = hc;
+
+                        chunk.AddHex(hc);
+                    }
                 }
-            });
+            }
 
-            return new Dictionary<Axial, HexTile>(tempHexTiles);
+            return hexTiles;
         }
 
         public void CreateBaseMesh()
@@ -360,6 +518,8 @@ namespace Assets.Scripts.WorldMap
             Triangles = hexSettings.BaseTrianges();
 
             Vertices = hexSettings.VertexCorners;
+
+            BaseUV = hexSettings.BaseHexUV;
         }
 
         /// <summary>
@@ -598,5 +758,42 @@ namespace Assets.Scripts.WorldMap
             return CombineVertices().Count;
         }
 
+        double minx = 0;
+        double maxx = 0;
+        double miny = 0;
+        double maxy = 0;
+        private void SetBounds()
+        {
+            minx = Vertices[5].x;
+            maxx = Vertices[2].x;
+            miny = Vertices[0].y;
+            maxy = Vertices[3].y;
+        }
+        public bool IsPointInPolygon(Vector3 p)
+        {
+            if (p.x < minx || p.x > maxx || p.y < miny || p.y > maxy)
+            {
+                return false;
+            }
+
+            // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+            
+            bool inside = false;
+            for (int i = 0, j = Vertices.Count - 1; i < Vertices.Count; j = i++)
+            {
+                if ((Vertices[i].y > p.y) != (Vertices[j].y > p.y) &&
+                     p.x < (Vertices[j].x - Vertices[i].x) * (p.y - Vertices[i].y) / (Vertices[j].y - Vertices[i].y) + Vertices[i].x)
+                {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(GridCoordinates, AxialCoordinates, Position, mesh);
+        }
     }
 }

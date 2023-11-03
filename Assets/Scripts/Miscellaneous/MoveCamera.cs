@@ -17,10 +17,10 @@ public class MoveCamera : MonoBehaviour
 
     private Vector3 dragOrigin;
     private Vector3 originalPosition;
-
+    bool go = false;
     private void Update()
     {
-        if(Time.timeSinceLevelLoad > 3f)
+        if(Time.timeSinceLevelLoad > 1f)
         {
             // Camera Zoom
             float scrollInput = Input.GetAxis("Mouse ScrollWheel");
@@ -28,16 +28,24 @@ public class MoveCamera : MonoBehaviour
             mainCamera.orthographicSize = Mathf.Clamp(mainCamera.orthographicSize - zoomAmount, minZoomDistance, maxZoomDistance);
 
             // Camera Drag
+
+            
             if (Input.GetMouseButtonDown(0))
             {
                 dragOrigin = Input.mousePosition;
                 originalPosition = transform.position;
+                go = true;
             }
 
-            if (Input.GetMouseButton(0))
+            if (Input.GetMouseButton(0) && go)
             {
                 Vector3 offset = Camera.main.ScreenToWorldPoint(dragOrigin) - Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 transform.position = originalPosition + offset;
+            }
+
+           if(Input.GetMouseButton(0) == false)
+            {
+                go = false;
             }
         }      
     }

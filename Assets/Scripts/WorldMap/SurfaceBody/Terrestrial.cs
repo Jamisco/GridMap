@@ -5,29 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static Assets.Scripts.WorldMap.PlanetGenerator;
-using static UnityEditor.Progress;
 
 namespace Assets.Scripts.WorldMap.Biosphere
 {
     [System.Serializable]
     public class Terrestrial : SurfaceBody
     {
-        public enum Biomes
-        {
-            Tundra, // 0
-            BorealForest, // 1
-            TemperateRainforest, // 2
-            TropicalRainforest, // 3
-            TemperateGrassland, // cold deserts --- 4
-            Woodland, // AKA shrublands ---- 5
-            TemperateSeasonalForest, // 6
-            SubtropicalDesert, // 7
-            TropicalSeasonalForest, // 8
-
-            Polar, // 9
-            PolarDesert, // 10
-        };
-
         public Terrestrial()
         {
 
@@ -104,66 +87,12 @@ namespace Assets.Scripts.WorldMap.Biosphere
             return (Biomes)BiomeTable[x, y];
         }
 
-        public override BiomeProperties GetBiomeProperties(GridValues grid)
+        public override BiomeData GetBiomeData(GridValues grid)
         {
             float temp = grid.Temperature;
             float precip = grid.Precipitation;
 
-            return GetBiomeProperties(GetBiome(temp, precip));
-        }
-
-        public BiomeProperties GetBiomeProperties(Biomes biome)
-        {
-            int hash = GetHash(biome);
-
-            BiomeProperties props;
-
-            biomeProperties.TryGetValue(hash, out props);
-
-            return props;
-        }
-
-        public void Init()
-        {
-            ConvertData();
-        }
-
-
-        [SerializeField] private List<BiomeData> biomeData = new List<BiomeData>();
-        private void ConvertData()
-        {
-            biomeProperties.Clear();
-            
-            foreach (BiomeData item in biomeData)
-            {
-                int hash = GetHash(item.biome);
-
-                Color _color = item.color;
-                Texture2D _texture = item.texture;
-
-                biomeProperties.TryAdd(hash, new BiomeProperties(hash, _color, _texture));
-            }
-        }
-
-        private int GetHash(Biomes biome)
-        {
-            string name = nameof(Terrestrial) + biome.ToString();
-
-            return name.GetHashCode();
-        }
-        
-        [System.Serializable]
-        private struct BiomeData
-        {
-            public Biomes biome;
-            public Color color;
-            public Texture2D texture;
-            public BiomeData(Biomes biome, Color color, Texture2D texture)
-            {
-                this.biome = biome;
-                this.color = color;
-                this.texture = texture;
-            } 
+            return GetBiomeData(GetBiome(temp, precip)); // lagging me or you 
         }
     }
 }

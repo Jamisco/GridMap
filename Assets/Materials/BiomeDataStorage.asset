@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d47af78d6d8f0054884613eb5d3f39dc, type: 3}
+  m_Name: BiomeDataStorage
+  m_EditorClassIdentifier: 
+  biomeData:
+  - _biome: 0
+    _biomeColor: {r: 0.4371261, g: 0.41266778, b: 0.41075173, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 215e28c9c4a676747932d63132dd82bb, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 1
+    _biomeColor: {r: 0.43710184, g: 0.49005052, b: 0.20637743, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 597c788c377099f4cac099e7616ca8f1, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 2
+    _biomeColor: {r: 0.119876616, g: 0.27807036, b: 0.09856759, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 01a1610bf7ebdcf4990648a6f54c754f, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 3
+    _biomeColor: {r: 0.1970714, g: 0.6069817, b: 0.11291211, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 51babd26549616d45ab9e445869bac3c, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 4
+    _biomeColor: {r: 0.4024003, g: 0.3845391, b: 0.24565735, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: f55770fe15bae1a4c97e5803d36adadf, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 5
+    _biomeColor: {r: 0.33775413, g: 0.350172, b: 0.15886548, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: cf3bbd0ebaef60049beb69c7d04e56dc, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 6
+    _biomeColor: {r: 0.36352062, g: 0.5324335, b: 0.0604564, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 19969405a0e4e3b4b99d3909aeaf7c47, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 7
+    _biomeColor: {r: 0.4092026, g: 0.33179158, b: 0.2729162, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 93239e41e3ccda94fb5d1bd1891ae91f, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 8
+    _biomeColor: {r: 0.31183594, g: 0.4885631, b: 0.1489465, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: df19ed2cd03e0a34fac28038a20554b9, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 9
+    _biomeColor: {r: 0.7682782, g: 0.77056533, b: 0.7785593, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: 34bc1c82251d51d47b35c7d1c56b6486, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 10
+    _biomeColor: {r: 0.75447136, g: 0.75913376, b: 0.72828895, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: c16a6df78bbdbf8489475eb6caa21e3a, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 11
+    _biomeColor: {r: 0.07978246, g: 0.5226615, b: 0.5820705, a: 1}
+    _seasonTexture: {fileID: 2800000, guid: aa701e5be2dbcd24aad4fb9c3ca284da, type: 3}
+    _weatherTexture: {fileID: 0}
+  - _biome: 12
+    _biomeColor: {r: 1, g: 1, b: 1, a: 1}
+    _seasonTexture: {fileID: 0}
+    _weatherTexture: {fileID: 0}
+  - _biome: 13
+    _biomeColor: {r: 1, g: 1, b: 1, a: 1}
+    _seasonTexture: {fileID: 0}
+    _weatherTexture: {fileID: 0}

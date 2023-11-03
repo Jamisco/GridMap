@@ -1,5 +1,6 @@
 ﻿
 using Assets.Scripts.Miscellaneous;
+using Assets.Scripts.WorldMap.Biosphere;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -495,7 +496,7 @@ namespace Assets.Scripts.WorldMap
             
         }
 
-        public BiomeProperties GetBiomeProperties(int x, int y)
+        public BiomeData GetBiomeProperties(int x, int y)
         {
             float temp = GetTemperature(x, y);
             float precip = GetPrecipitation(x, y);
@@ -519,7 +520,7 @@ namespace Assets.Scripts.WorldMap
 
             GridValues gridValues = new GridValues(temp, precip, surface, surfaceType);
 
-            return MainPlanet.GetBiomeProperties(gridValues);
+            return MainPlanet.GetBiomeData(gridValues);
         }
 
         public struct GridValues

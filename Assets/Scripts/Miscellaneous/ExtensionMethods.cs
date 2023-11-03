@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,6 +35,14 @@ namespace Assets.Scripts.Miscellaneous
         public static GameObject GetGameObject(this GameObject gameObject, string objectName)
         {
             return gameObject.GetComponentByName<Transform>(objectName).gameObject;
+        }
+
+        public static void RemoveRange<T>(this List<T> collection, int startIndex, int count)
+        {
+            if (collection.Count > startIndex)
+            {
+                collection.RemoveRange(startIndex, count);
+            }
         }
 
         private static Random random = new Random(Environment.TickCount);
@@ -80,6 +89,87 @@ namespace Assets.Scripts.Miscellaneous
             normalizedValue = (normalizedValue * (maxRange - minRange)) + minRange;
 
             return normalizedValue;
+        }
+
+        /// <summary>
+        /// Will log the given milliseconds in a readable format. 
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="timeInMilliseconds"></param>
+        public static void LogTimer(string message, float timeInMilliseconds)
+        {
+            Debug.Log(ParseLogTimer(message, timeInMilliseconds));
+        }
+
+        public static string ParseLogTimer(string message, float timeInMilliseconds)
+        {
+            int minutes;
+            float seconds;
+
+            string log = "";
+
+            if (timeInMilliseconds >= 60000)
+            {
+                minutes = (int)(timeInMilliseconds / 60000);
+                seconds = (timeInMilliseconds % 60000) / 1000f;
+                log = $"{message} {minutes} minutes {seconds} seconds";
+            }
+            else
+            {
+                log = $"{message} {timeInMilliseconds / 1000f} seconds";
+            }
+
+            return log;
+        }
+
+        public static bool TryRemoveElementsInRange<TValue>([DisallowNull] this IList<TValue> list, int index, int count, [NotNullWhen(false)] out Exception error)
+        {
+            try
+            {
+                if (list is List<TValue> genericList)
+                {
+                    genericList.RemoveRange(index, count);
+                }
+                else
+                {
+                    if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+                    if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+                    if (list.Count - index < count) throw new ArgumentException("index and count do not denote a valid range of elements in the list");
+
+                    for (var i = count; i > 0; --i)
+                        list.RemoveAt(index);
+                }
+            }
+            catch (Exception e)
+            {
+                error = e;
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+
+
+        public static Mesh CloneMesh(this Mesh parent)
+        {
+            Mesh mesh = new Mesh();
+            mesh.vertices = parent.vertices;
+            mesh.triangles = parent.triangles;
+            mesh.uv = parent.uv;
+            mesh.normals = parent.normals;
+            mesh.tangents = parent.tangents;
+            mesh.colors = parent.colors;
+            mesh.bindposes = parent.bindposes;
+            mesh.boneWeights = parent.boneWeights;
+            mesh.subMeshCount = parent.subMeshCount;
+            mesh.name = parent.name;
+            mesh.bounds = parent.bounds;
+            mesh.indexFormat = parent.indexFormat;
+            mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            return mesh;
         }
     }
 }

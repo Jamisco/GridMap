@@ -1,6 +1,6 @@
 The Objective of this program is to find a more efficient and effective means to generate large tile maps
 
- - We hope to complete this projects in 2 weeks.
+ - We hope to complete this projects in 2 weeks. (oof)
  
  
  - The tile map should allow individual access and manipulation of tiles, 

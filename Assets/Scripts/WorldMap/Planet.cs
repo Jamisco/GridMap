@@ -62,26 +62,26 @@ namespace Assets.Scripts.WorldMap
             }
         }
 
-        public BiomeProperties GetBiomeProperties(GridValues gridValues)
+        public void InitializeBiomeData()
         {
-            BiomeProperties props;
             
+        }
+        
+
+        public BiomeData GetBiomeData(GridValues gridValues)
+        {
+            BiomeData biomeData;
+                      
             if (gridValues.SurfaceType == SurfaceType.Terrestrial)
             {
-                props = TerrestrialBody.GetBiomeProperties(gridValues);
+                biomeData = TerrestrialBody.GetBiomeData(gridValues);
             }
             else
             {
-                props = MarineBody.GetBiomeProperties(gridValues);
+                biomeData = MarineBody.GetBiomeData(gridValues);
             }
 
-            return props;
-        }
-
-        public void Initialize()
-        {
-            TerrestrialBody.Init();
-            MarineBody.Init();
+            return biomeData;
         }
         
         public enum SurfaceType
