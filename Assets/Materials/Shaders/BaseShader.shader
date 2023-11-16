@@ -108,25 +108,27 @@
             }
 
             fixed4 frag(v2f i) : SV_Target 
-            {          
-            
+            {                     
                 if(_UseColor == 1)
 				{
-					return i.color * _Color;
+					float4 final = i.color * _Color;
+                    
+                    fixed4 white = (1,1,1,1);
+                    
+                    return lerp(final, white, _Text2Lerp);
 				}
                 
                 fixed4 col1 = tex2D(_MainTex, i.uv);
                 fixed4 col2 = tex2D(_Texture1, i.uv);
                 fixed4 col3 = tex2D(_Texture2, i.uv);
 
-                fixed4 lerp1 = lerp(col1, col2, _Text2Lerp);
+                //fixed4 lerp1 = lerp(col1, col2, _Text2Lerp);
 
-                fixed4 final_color = lerp(lerp1, col3, _Text3Lerp);
+                //fixed4 final_color = lerp(lerp1, col3, _Text3Lerp);
             
-                float4 col = final_color;
+                float4 col = col1 * col2;
                 
-                //float4 stoch = tex2DStochastic(_MainTex, i.uv);
-                
+                //float4 stoch = tex2DStochastic(_MainTex, i.uv);               
                 //float4 col = stoch;
                 
                 fixed4 ay = (_HeightColor.y - _HeightColor.x) * ((i.y - _HeightRange.x) / (_HeightRange.y - _HeightRange.x)) + _HeightColor.x;

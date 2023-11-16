@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -189,7 +190,7 @@ namespace Assets.Scripts.WorldMap
         /// <param name="hash"></param>
         /// <param name="position"></param>
         /// <returns></returns>
-        public bool RemoveMesh_NoUpdate(int hash, int position = -1)
+        private bool RemoveMesh_NoUpdate(int hash, int position = -1)
         {
             // this allows us to skip having to refind the index again
             int index = position == -1 ? MeshHashes.IndexOf(hash) : position;
@@ -234,6 +235,12 @@ namespace Assets.Scripts.WorldMap
             return false;
         }
 
+        /// <summary>
+        /// Fused the given mesh into the new one. Be advised that if you are adding a a mesh with a hash that already exists, the old mesh will be removed and the new one will be added
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="hash"></param>
+        /// <param name="offset"></param>
         public void AddMesh(Mesh mesh, int hash, Vector3 offset)
         {
             AddMesh_NoUpdate(mesh, hash, offset);
@@ -297,6 +304,10 @@ namespace Assets.Scripts.WorldMap
             }
         }
 
+        public bool HasMesh(int hash)
+        {
+            return MeshHashes.IndexOf(hash) == -1 ? false : true;
+        }
         public Mesh GetMesh()
         {
             Mesh mesh = new Mesh();

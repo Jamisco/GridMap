@@ -7,6 +7,7 @@ The Objective of this program is to find a more efficient and effective means to
 	- Both visually and logically
 
 - The map should be able to generate a 1000 x 1000 map in less than 1 second
+	---- HAHAHAHAHHAHAHAHAHAA, LESS THAN A SECOND, BOY WAS I AMBITIOUS
 - The map will allow for the user to use different materials in order to generate their wanted textures
 
 - possible, there should be heights

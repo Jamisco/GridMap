@@ -1,25 +1,16 @@
 ﻿using Assets.Scripts.Miscellaneous;
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using UnityEditor;
 using UnityEngine;
-using static Assets.Scripts.Miscellaneous.HexFunctions;
-using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
-using static Assets.Scripts.WorldMap.GridManager;
-using static Assets.Scripts.WorldMap.Planet;
+
 using Random = System.Random;
 
 namespace Assets.Scripts.WorldMap
 {
     public class HexTile
     {
-        public static HexSettings hexSettings;
+        public HexSettings hexSettings;
 
         /// <summary>
         /// The index is the respective i
@@ -64,6 +55,9 @@ namespace Assets.Scripts.WorldMap
             return mod;
         }
 
+        /// <summary>
+        /// Is true when the Y position of the coordinates is odd
+        /// </summary>
         public bool IsOffset
         {
             get
@@ -144,11 +138,11 @@ namespace Assets.Scripts.WorldMap
             /// </summary>
             /// <param name="axial"></param>
             /// <returns></returns>
-            public static Vector3Int FromAxial(Axial axial)
+            public static Vector2Int FromAxial(Axial axial)
             {
                 int x = axial.X + ((axial.Y - (axial.Y & 1)) / 2);
 
-                return new Vector3Int(x, axial.Y, 0);
+                return new Vector2Int(x, axial.Y);
             }
 
             public static bool operator ==(Axial coord1, Axial coord2)
@@ -229,7 +223,7 @@ namespace Assets.Scripts.WorldMap
         /// <param name="x"></param>
         /// <param name="z"></param>
         /// <returns></returns>
-        public static Vector3 GetPosition(int x, float y, int z)
+        public static Vector3 GetPosition(int x, float y, int z, HexSettings hexSettings)
         {
             Vector3 position;
             // it looks thsame but i assure u, its differnt
@@ -240,23 +234,22 @@ namespace Assets.Scripts.WorldMap
             return position;
         }
 
-        public static Vector3 GetPosition(Vector3Int pos)
+        public static Vector3 GetPosition(Vector3Int pos, HexSettings hexSettings)
         {
-            return GetPosition(pos.x, pos.y, pos.z);
+            return GetPosition(pos.x, pos.y, pos.z, hexSettings);
         }
 
-
-        private static float GetPositionZ(int z)
+        private static float GetPositionZ(int z, HexSettings hexSettings)
         {
             return z * (hexSettings.outerRadius * 1.5f) + (z * hexSettings.stepDistance);
         }
 
         /// <summary>
-        /// Be aware that this function is only accurate 80% of the time. Due to the nature of the hex grid, there are some cases where the function will return the wrong value because of offsets. Thus is it recommended to also get the surrounding tiles and check if the tile is actually the closest one.
+        /// Be aware that this function might not be accurate in some rare occasions. Due to the nature of the hex grid, there are some cases where the function will return the wrong value because of tiny discrepancies in distances. Thus it is recommended to also get the surrounding tiles and check if the tile is actually the closest one.
         /// </summary>
         /// <param name="worldPosition"></param>
         /// <returns></returns>
-        public static Vector2Int GetGridCoordinate(Vector3 worldPosition)
+        public static Vector2Int GetGridCoordinate(Vector3 worldPosition, HexSettings hexSettings)
         {
             Vector3Int gridCoordinate = Vector3Int.zero;
 
@@ -281,8 +274,8 @@ namespace Assets.Scripts.WorldMap
             int CloserZ()
             {
                 float position = worldPosition.z;
-                float val1Pos = GetPositionZ(minZ);
-                float val2Pos = GetPositionZ(maxZ);
+                float val1Pos = GetPositionZ(minZ, hexSettings);
+                float val2Pos = GetPositionZ(maxZ, hexSettings);
 
                 float val1Distance = Mathf.Abs(val1Pos - position);
                 float val2Distance = Mathf.Abs(val2Pos - position);
@@ -303,8 +296,8 @@ namespace Assets.Scripts.WorldMap
             int CloserX()
             {
                 float position = worldPosition.x;
-                float val1Pos = GetPosition(minX, 0, clozerZ).x;
-                float val2Pos = GetPosition(maxX, 0, clozerZ).x;
+                float val1Pos = GetPosition(minX, 0, clozerZ, hexSettings).x;
+                float val2Pos = GetPosition(maxX, 0, clozerZ, hexSettings).x;
 
                 float val1Distance = Mathf.Abs(val1Pos - position);
                 float val2Distance = Mathf.Abs(val2Pos - position);
@@ -352,26 +345,13 @@ namespace Assets.Scripts.WorldMap
         public List<int> Triangles = new List<int>(12);
 
         List<Vector3> SlopeVertices = new List<Vector3>(4);
+        List<Vector2> SlopeUV = new List<Vector2>(28);
         List<int> SlopeTriangles = new List<int>(6);
+        Vector2[] BaseUV;
 
-        public List<Vector2> SlopeUV = new List<Vector2>(28);
+        public static readonly Exception HexNotFoundException = new Exception("Hex Not Found");
 
-        Mesh mesh;
-        
-        public Vector2[] BaseUV;
-
-        private BiomeData _hexBiomeData;
-        public BiomeData HexBiomeData 
-        {   
-            get { return _hexBiomeData; }
-            set { _hexBiomeData = value; }
-        }
-
-        public BiomeData DefaultBiomeData
-        {
-            get { return Planet.GetBiomeProperties(X, Y); }
-            
-        }
+        public HexVisualData VisualData { get; set; }
 
         /// <summary>
         /// Quick access to the X coordinates of the tile
@@ -383,39 +363,11 @@ namespace Assets.Scripts.WorldMap
         /// </summary>
         public int Y { get { return GridCoordinates.y; } }
 
-
-        public static GridManager Grid { get; set; }
-        public static PlanetGenerator Planet;
+        public GridManager Grid { get; private set; }
 
         // We should pass the planet instead
 
-        static Random random = new Random();
-        public HexTile(int x, int z)
-        {
-            AxialCoordinates = Axial.ToAxial(x, z);
-            GridCoordinates = new Vector2Int(x, z);
-
-            float y = random.NextFloat(0, hexSettings.maxHeight);
-
-            Position = GetPosition(x, y, z);
-
-            CreateBaseMesh();
-            //CreateOuterHexMesh();
-
-            //InitiateDrawProtocol();
-
-            SetBounds();
-
-            try
-            {
-                _hexBiomeData = DefaultBiomeData;
-            }
-            catch (Exception)
-            {
-                // this exception is here just in case the planet arrays have not been computed yet
-            }
-        }
-
+        Random random = new Random();
         public static void CreateSlopes(Dictionary<Axial, HexTile> hexes)
         {
             Parallel.ForEach(hexes.Values, (hexTile) =>
@@ -424,11 +376,10 @@ namespace Assets.Scripts.WorldMap
             });
 
         }
-
-        public static Dictionary<Axial, HexTile> CreatesHexes(Vector2Int MapSize, ref List<HexChunk> hexChunks)
+        public static Dictionary<Vector2Int, HexTile> CreatesHexes(Vector2Int MapSize, ref List<HexChunk> hexChunks, GridManager grid)
         {
-            Dictionary<Axial, HexTile> hexTiles = new Dictionary<Axial, HexTile>(MapSize.x * MapSize.y + 10);
-
+            // we define the size of the dictionary to avoid resizing it, which slows things down
+            Dictionary<Vector2Int, HexTile> hexTiles = new Dictionary<Vector2Int, HexTile>(MapSize.x * MapSize.y + 10);
 
             #region Parrallel forEach
             //Parallel.ForEach(hexChunks, chunk =>
@@ -483,7 +434,6 @@ namespace Assets.Scripts.WorldMap
 
             #endregion
 
-
             // It seems using a standard loop is about 30% - 50% faster than using parrallel.
             // For a 1000 x 1000 grid
             // For loop: 7 seconds
@@ -501,9 +451,9 @@ namespace Assets.Scripts.WorldMap
                 {
                     for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
                     {
-                        HexTile hc = new HexTile(x, z);
+                        HexTile hc = new HexTile(x, z, grid);
 
-                        hexTiles[hc.AxialCoordinates] = hc;
+                        hexTiles[hc.GridCoordinates] = hc;
 
                         chunk.AddHex(hc);
                     }
@@ -513,6 +463,28 @@ namespace Assets.Scripts.WorldMap
             return hexTiles;
         }
 
+        public HexTile(int x, int z, GridManager grid)
+        {
+            AxialCoordinates = Axial.ToAxial(x, z);
+            GridCoordinates = new Vector2Int(x, z);
+
+            hexSettings = grid.HexSettings;
+
+            float y = random.NextFloat(0, hexSettings.maxHeight);
+
+            Position = GetPosition(x, y, z, hexSettings);
+
+            Grid = grid;
+
+            // hexes will be created with a default color of white
+            VisualData = new HexVisualData(Color.white);
+
+            CreateBaseMesh();
+            
+            SetBounds();
+
+            hexSettings = Grid.HexSettings;
+        }
         public void CreateBaseMesh()
         {
             Triangles = hexSettings.BaseTrianges();
@@ -550,7 +522,7 @@ namespace Assets.Scripts.WorldMap
             SlopeVertices.Clear();
             SlopeTriangles.Clear();
 
-            List<HexTile> surroundingHex = GetSurroundingHexes(this, Grid);
+            List<HexTile> surroundingHex = GetSurroundingHexes();
 
             for (int i = 0; i < 6; i++)
             {
@@ -645,21 +617,23 @@ namespace Assets.Scripts.WorldMap
                 }
             }
         }
-        public static List<HexTile> GetSurroundingHexes(HexTile hex, GridManager grid)
+        public List<HexTile> GetSurroundingHexes()
         {
             List<HexTile> surroundingHexs = new List<HexTile>();
 
             for (int i = 0; i < 6; i++)
             {
-                Axial sPos = hex.AxialCoordinates + SurroundingHexes[i];
+                Axial sPos = AxialCoordinates + SurroundingHexes[i];
 
                 // will include null
-                surroundingHexs.Add(grid.GetHexTile(sPos));
+                surroundingHexs.Add(Grid.GetHexTile(sPos));
             }
 
             return surroundingHexs;
         }
-        public Mesh DrawMesh()
+
+        Mesh mesh;
+        public Mesh GetMesh()
         {
             if (mesh == null)
             {
@@ -678,48 +652,6 @@ namespace Assets.Scripts.WorldMap
             mesh.uv = CombineUV().ToArray();
 
             return mesh;
-        }
-
-        public Color[] MeshColors()
-        {
-            Color[] colors = new Color[Vertices.Count];
-
-            for (int i = 0; i < colors.Length; i++)
-            {
-
-                colors[i] = Planet.GetBiomeProperties(X, Y).BiomeColor;
-            }
-
-            return colors;
-        }
-
-        public void SetMaterialProperty()
-        {
-            if (mesh == null)
-            {
-                return;
-            }
-        }
-    
-
-        /// higher values the smaller the mapping wll be
-        private float mul = 3;
-        private Vector2 GetHexUV(Vector3 vertexPosition)
-        {
-            // Assuming hexagons are uniformly spaced in a Grid along the Z-axis
-            // Calculate the relative position of the vertex within the hexagon
-            float relativeX = vertexPosition.x / hexSettings.innerRadius;
-            float relativeY = vertexPosition.y / (Position.y + hexSettings.outerRadius - hexSettings.innerRadius);
-            float relativeZ = vertexPosition.z / (hexSettings.outerRadius);
-
-            // Calculate UV coordinates based on the relative position
-            // Using a custom range for UV coordinates based on the hexagon dimensions
-            float uvX = (mul * relativeX);
-            float uvY = (mul * relativeY);
-            float uvZ = (mul * relativeZ);
-
-            // Return the UV coordinate
-            return new Vector2(uvX, uvZ);
         }
         List<Vector3> CombineVertices()
         {
@@ -795,5 +727,153 @@ namespace Assets.Scripts.WorldMap
         {
             return HashCode.Combine(GridCoordinates, AxialCoordinates, Position, mesh);
         }
+
+
+        public struct HexVisualData : IEquatable<HexVisualData>
+        {
+            public int VisualHash { get; private set; }
+
+            // you can either display the HexColor or the texture
+            public Color HexColor { get; private set; }
+            public Texture2D BaseTexture { get; private set; }
+            public Texture2D OverlayTexture1 { get; private set; }
+            public float WeatherLerp { get; set; }
+
+            public HexVisualOption VisualOption { get; set; }
+            public enum HexVisualOption { Color, BaseTextures, AllTextures }
+
+            // These constructores are set up in such a way that it forces the use to use either a HexColor or a texture
+            // Of course there is also the option of adding both a texture and a color
+            public HexVisualData(Color color, HexVisualOption visualOption = HexVisualOption.Color, float lerp = 0)
+            {
+                VisualHash = 0;
+
+                HexColor = color;
+                VisualOption = visualOption;
+
+                BaseTexture = null;
+                OverlayTexture1 = null;
+
+                WeatherLerp = lerp;
+
+                UpdateVisualHash();
+            }
+            public HexVisualData(Texture2D baseTexture,
+                                HexVisualOption visualOption = HexVisualOption.BaseTextures)
+            {
+                VisualHash = 0;
+
+                HexColor = Color.white;
+                VisualOption = visualOption;
+
+                BaseTexture = baseTexture;
+                OverlayTexture1 = null;
+
+                WeatherLerp = 0;
+
+                UpdateVisualHash();
+            }
+            public HexVisualData(Texture2D baseTexture, Texture2D overlayTexture, float lerp, HexVisualOption visualOption = HexVisualOption.AllTextures)
+            {
+                VisualHash = 0;
+
+                HexColor = Color.white;
+                VisualOption = visualOption;
+
+                BaseTexture = baseTexture;
+                OverlayTexture1 = overlayTexture;
+
+                WeatherLerp = lerp;
+
+                UpdateVisualHash();
+            }
+            public HexVisualData(Color color, Texture2D baseTexture, Texture2D overlayTexture, float lerp, HexVisualOption visualOption = HexVisualOption.AllTextures)
+            {
+                VisualHash = 0;
+
+                HexColor = color;
+                VisualOption = visualOption;
+
+                BaseTexture = baseTexture;
+                OverlayTexture1 = overlayTexture;
+
+                WeatherLerp = lerp;
+
+                UpdateVisualHash();
+            }
+
+            /// <summary>
+            /// This is used to set the UseColor variable. If true the hash will be changed to use the color, if false the hash will be changed to use the texture
+            /// </summary>
+            /// <param name="useColor"></param>
+            public void SetVisualOption(HexVisualOption option)
+            {
+                VisualOption = option;
+                UpdateVisualHash();
+            }
+
+            public void SetColor(Color color)
+            {
+                HexColor = color;
+                UpdateVisualHash();
+            }
+
+            public void SetBaseTexture(Texture2D texture)
+            {
+                BaseTexture = texture;
+                UpdateVisualHash();
+            }
+
+            public void SetOverlayTexture1(Texture2D texture)
+            {
+                OverlayTexture1 = texture;
+                UpdateVisualHash();
+            }
+
+            /// <summary>
+            /// Whenever the properties of the hex visuals are updated. You must update the visual hash.
+            /// Each has a unique visual hash. This hash is then used to determine if two hexes look thesame and thus can be rendered together in one draw call.
+            /// </summary>
+            private void UpdateVisualHash()
+            {
+                int hash = 0;
+
+                switch (VisualOption)
+                {
+                    case HexVisualOption.Color:
+                        hash = HashCode.Combine(VisualOption, WeatherLerp);
+                        break;
+                    default:
+                        
+                        if (WeatherLerp == 0)
+                        {
+                            hash = BaseTexture.GetHashCode();
+                        }
+                        else
+                        {
+                            hash = HashCode.Combine(BaseTexture, OverlayTexture1, WeatherLerp);
+                        }
+                        break;
+                }
+                // Just a redundancy,
+                hash = HashCode.Combine(hash, typeof(HexTile));
+
+                VisualHash = hash;
+            }
+
+            // this is primarily used to make check if two objects can be rendered together
+            // because objects withsame textures and colors will have thesame hashcode
+            public bool Equals(HexVisualData other)
+            {
+                if (other.VisualHash == VisualHash)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+        }
+
     }
 }

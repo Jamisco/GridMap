@@ -19,7 +19,7 @@ Shader "Custom/InstanceShader"
             };
 
             float4 _MeshColors[1023];   // Max instanced batch size.
-
+            
             struct v2f
             {
                 float4 vertex : SV_POSITION;
@@ -49,7 +49,7 @@ Shader "Custom/InstanceShader"
 
             float4 frag(v2f i) : SV_Target
             {
-                return i.color;
+            	return i.color;
             }
             ENDCG
         }

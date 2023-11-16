@@ -10,7 +10,8 @@ using UnityEngine.InputSystem;
 using static Assets.Scripts.Miscellaneous.ExtensionMethods;
 using System.Collections;
 using Assets.Scripts.WorldMap.Biosphere;
-using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody.BiomeData;
+using Unity.VisualScripting;
+using UnityEngine.UIElements;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -22,89 +23,174 @@ namespace Assets.Scripts.WorldMap
     [System.Serializable]
     public class GridManager : MonoBehaviour
     {
-        public HexSettings HexSettings;
-        public BiomeDataStorage BiomeDataStorage;
-        public GameObject hexParent;
-        public HexChunk hexChunkPrefab;
+        [Serializable]
+        public struct GridData
+        {
+            [Tooltip("The Maximum amount of hexes allowed in a chunk. Set this reasonable number because everytime a chunk is modified, the whole thing has to be redrawn. Large chunk will cause significant lag upon modification.")]
+            public int MaxHexPerChunk;
+
+            public Vector2Int MapSize;
+
+            public HexSettings HexSettings;
+            public Material MainMaterial;
+            public Material InstanceMaterial;
+
+
+            public GridData(Vector2Int mapSize, int maxHexPerChunk, HexSettings hexSettings, Material mainMaterial, Material instanceMaterial)
+            {
+                MapSize = mapSize;
+
+                MaxHexPerChunk = maxHexPerChunk;
+
+                HexSettings = hexSettings;
+
+                MainMaterial = mainMaterial;
+                InstanceMaterial = instanceMaterial;
+            }
+        }
+
+        public HexSettings HexSettings { get { return GridInfo.HexSettings; } }
+
+        private HexChunk hexChunkPrefab;
+        private GameObject chunkParent;
 
         private List<HexChunk> hexChunks;
-        Dictionary<Axial, HexTile> HexTiles;
+        private Dictionary<Vector2Int, HexTile> HexTiles;
 
-        public Material MainMaterial;
-        public Material InstanceMaterial;
-
-        public PlanetGenerator planetGenerator;
-        private Planet mainPlanet;
-
-        private Vector2Int MapSize;
+        private Vector2Int MapSize { get { return GridInfo.MapSize; } }
         private Bounds MapBounds;
-        [Tooltip("The Maximum amount of hexes allowed in a chunk. Set this reasonable number because everytime a chunk is modified, the whole thing has to be redrawn. Large chunk will cause significant lag.")]
-        public int MaxHexPerChunk;
 
-        public BiomeVisualOption biomeVisual;
+        public GridData GridInfo;
 
-        public Dictionary<int, HexData> HighlightedHexes;
-        public Dictionary<int, HexData> ActivatedBorderHexes;
-
-        private void SetGridSettings()
+        private void CreatePrefabs()
         {
-            HexChunk.MainMaterial = MainMaterial;
-            HexChunk.InstanceMaterial = InstanceMaterial;
+            if (chunkParent == null)
+            {
+                chunkParent = new GameObject("Hex Chunks");
+                chunkParent.transform.SetParent(transform);
+            }
 
-            HexChunk.BiomeVisual = biomeVisual;
-            SurfaceBody.SetBiomeData(BiomeDataStorage.GetData());
+            if (hexChunkPrefab == null)
+            {
+                GameObject chunkObj = new GameObject("Chunk Prefab");
 
-            HexTile.Grid = this;
-            HexTile.Planet = planetGenerator;
+                hexChunkPrefab = chunkObj.AddComponent<HexChunk>();
+                hexChunkPrefab.transform.SetParent(transform);
 
-            HexTile.hexSettings = HexSettings;
-
-            mainPlanet = planetGenerator.MainPlanet;
-            MapSize = mainPlanet.PlanetSize;
+                hexChunkPrefab.GetComponent<MeshRenderer>().material = GridInfo.MainMaterial;
+            }
         }
         private void SetBounds()
         {
             Vector3 center
-                = HexTile.GetPosition(mainPlanet.PlanetSize.x / 2, 0, mainPlanet.PlanetSize.y / 2);
+                = HexTile.GetPosition(MapSize.x / 2, 0, MapSize.y / 2, GridInfo.HexSettings);
 
-            Vector3 start = GetPosition(Vector3Int.zero);
-            Vector3 end = GetPosition(mainPlanet.PlanetSize.x, 0, mainPlanet.PlanetSize.y);
+            Vector3 start = GetPosition(Vector3Int.zero, GridInfo.HexSettings);
+            Vector3 end = GetPosition(MapSize.x, 0,
+                MapSize.y, GridInfo.HexSettings);
 
             MapBounds = new Bounds(center, end - start);
         }
-        private void Awake()
-        {   
-            HexTiles = new Dictionary<Axial, HexTile>();
+
+        #region Hex Generation Methods
+        public void GenerateGrid(bool spawnAsync = true)
+        {
+            HexTiles = new Dictionary<Vector2Int, HexTile>();
 
             hexChunks = new List<HexChunk>();
 
-            HighlightedHexes = new Dictionary<int, HexData>();
-            ActivatedBorderHexes = new Dictionary<int, HexData>();
+            CreatePrefabs();
 
-            SetGridSettings();
-
-            GenerateGridChunks();
+            GenerateGridChunks(spawnAsync);
         }
 
-        [Tooltip("If true when mouse is over hex, mouse will highlight, if false, mouse will highlight when clicked")]
-        public bool HoverHighlight = false;
-        private void Update()
-        {
-            UpdateHexProperties();
+        // 6 for the base hex, 6 for each slope on each side of the hex
+        static readonly int maxHexVertCount = 6;
 
-            if (HoverHighlight)
+        // the max vert count of combined mesh. Unity side limit
+        static readonly int maxVertCount = 65535;
+
+        Vector2Int ChunkCount = new Vector2Int();
+        int ChunkSize2Use = -1;
+
+        private void CalculateChunkSizes()
+        {
+            int maxHexCount = maxVertCount / maxHexVertCount;
+
+            int maxHex = GridInfo.MaxHexPerChunk;
+
+            if (maxHexCount > maxHex && maxHex > 0)
             {
-                HighlightOnHover();
+                maxHexCount = maxHex;
             }
 
-            OnMouseClick();
+            ChunkSize2Use = (int)Mathf.Sqrt(maxHexCount);
+
+            // if the map is small enough such that it can fit in our chunk size, we use the map size instead
+            if (ChunkSize2Use * ChunkSize2Use > MapSize.x * MapSize.y)
+            {
+                // Since all chunks will be squares, we use the smaller of the two map sizes
+                ChunkSize2Use = Mathf.Max(MapSize.x, MapSize.y);
+            }
+
+            //ChunkSize2Use -= 1;
+
+            ChunkCount.x = Mathf.CeilToInt((float)MapSize.x / ChunkSize2Use);
+            ChunkCount.y = Mathf.CeilToInt((float)MapSize.y / ChunkSize2Use);
         }
 
-        #region Hex Generation Methods
-
-        public float time;
-        public void GenerateGridChunks()
+        private void CreateHexChunks()
         {
+            hexChunks.Clear();
+
+            CalculateChunkSizes();
+
+            HexChunk chunk;
+
+            for (int z = 0; z < ChunkCount.y; z++)
+            {
+                for (int x = 0; x < ChunkCount.x; x++)
+                {
+                    bool inX = (x + 1) * ChunkSize2Use <= MapSize.x;
+                    bool inZ = (z + 1) * ChunkSize2Use <= MapSize.y;
+
+                    Vector3Int start = new Vector3Int();
+                    Vector3Int size = new Vector3Int();
+
+                    start.x = x * ChunkSize2Use;
+                    start.y = z * ChunkSize2Use;
+
+                    if (inX)
+                    {
+                        size.x = ChunkSize2Use;
+                    }
+                    else
+                    {
+                        size.x = MapSize.x - start.x;
+                    }
+
+                    if (inZ)
+                    {
+                        size.y = ChunkSize2Use;
+                    }
+                    else
+                    {
+                        size.y = MapSize.y - start.y;
+                    }
+
+                    BoundsInt bounds = new BoundsInt(start, size);
+
+                    chunk = Instantiate(hexChunkPrefab, chunkParent.transform);
+                    chunk.Initialize(this, GridInfo, bounds);
+                    hexChunks.Add(chunk);
+                }
+            }
+        }
+
+        [NonSerialized] public float time;
+        private void GenerateGridChunks(bool spawnAsync = true)
+        {
+            #region Time Stats
             // Time starts for 300 x 300
 
             //Computer Biome : .044-- 1.2 %
@@ -130,56 +216,55 @@ namespace Assets.Scripts.WorldMap
 
             // Generation Time: 14.976
 
+            #endregion
+
             time = 0;
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            hexSettings.ResetVariables();
-            HexTiles.Clear();
+            GridInfo.HexSettings.ResetVariables();
+            //HexTiles.Clear();
             HighlightedHexes.Clear();
 
             DestroyChildren();
 
-            SetGridSettings();
-
-            planetGenerator.SetComputeSize();
-            planetGenerator.ComputeBiomeNoise();
-
-            LogTimer("Compute Biome: ", sw.ElapsedMilliseconds);
-
             CreateHexChunks();
 
-            LogTimer("Create Chunks: ", sw.ElapsedMilliseconds);
-
-            HexTiles = HexTile.CreatesHexes(MapSize, ref hexChunks);
-
-            LogTimer("Create Hexes: ", sw.ElapsedMilliseconds);
-
-            StartCoroutine(SpawnChunkEveryXSeconds(0));
-
-
+            HexTiles = HexTile.CreatesHexes(MapSize, ref hexChunks, this);
 
             SetBounds();
+
+            if (spawnAsync)
+            {
+                StartCoroutine(SpawnChunkEveryXSeconds(0));
+            }
+            else
+            {
+                for (int i = 0; i < hexChunks.Count; i++)
+                {
+                    hexChunks[i].InitiateDrawProtocol();
+                }
+            }
 
             sw.Stop();
             time = sw.ElapsedMilliseconds;
             LogTimer("Generation Time: ", sw.ElapsedMilliseconds);
         }
-        public void InitializeChunks()
+        public void RedrawChunks(bool drawAsync = true)
         {
-            CreateHexChunks();
-
-            Parallel.ForEach(HexTiles.Values, (hexTile) =>
+            if (drawAsync)
             {
-                hexChunks.First(h => h.IsInChunk(hexTile.X, hexTile.Y)).AddHex(hexTile);
-            });
-
-            //Debug.Log("Adding To Chunk Elapsed : " + (timer.ElapsedMilliseconds / 1000f).ToString("0.00") + " seconds");
-
-
+                StartCoroutine(DrawChunkEveryXSeconds(0));
+            }
+            else
+            {
+                foreach (HexChunk chunk in hexChunks)
+                {
+                    chunk.InitiateDrawProtocol();
+                }
+            }
         }
-
         private IEnumerator SpawnChunkEveryXSeconds(float time)
         {
             for (int i = 0; i < hexChunks.Count; i++)
@@ -188,163 +273,252 @@ namespace Assets.Scripts.WorldMap
                 yield return new WaitForSeconds(time);
             }
         }
-
-        private void CreateHexChunks()
+        private IEnumerator DrawChunkEveryXSeconds(float time = 0)
         {
-            hexChunks.Clear();
-
-            // 6 for the base hex, 6 for each slope on each side of the hex
-            int maxHexVertCount = 6;
-
-            // the max vert count of combined mesh. Unity side limit
-            int maxVertCount = 65535;
-
-            int maxHexCount = maxVertCount / maxHexVertCount;
-
-            if (maxHexCount > MaxHexPerChunk && MaxHexPerChunk > 0)
+            for (int i = 0; i < hexChunks.Count; i++)
             {
-                maxHexCount = MaxHexPerChunk;
+                hexChunks[i].InitiateDrawProtocol();
+                yield return new WaitForSeconds(time);
             }
-
-            int chunkSize2Use = 0;
-            
-            chunkSize2Use = (int)Mathf.Sqrt(maxHexCount);
-
-            // if the map is small enough such that it can fit in out chunk size, we use the map size instead
-            if (chunkSize2Use * chunkSize2Use > MapSize.x * MapSize.y)
-            {
-                // Since all chunks will be squares, we use the smaller of the two map sizes
-                chunkSize2Use = Mathf.Max(MapSize.x, MapSize.y);
-            }
-
-            //chunkSize2Use -= 1;
-
-            int chunkCountX = Mathf.CeilToInt((float)MapSize.x / chunkSize2Use);
-            int chunkCountZ = Mathf.CeilToInt((float)MapSize.y / chunkSize2Use);
-
-            HexChunk chunk;
-
-            for (int z = 0; z < chunkCountZ; z++)
-            {
-                for (int x = 0; x < chunkCountX; x++)
-                {
-                    bool inX = (x + 1) * chunkSize2Use <= MapSize.x;
-                    bool inZ = (z + 1) * chunkSize2Use <= MapSize.y;
-
-                    Vector3Int start = new Vector3Int();
-                    Vector3Int size = new Vector3Int();
-
-                    start.x = x * chunkSize2Use;
-                    start.y = z * chunkSize2Use;
-
-                    if (inX)
-                    {
-                        size.x = chunkSize2Use;
-                    }
-                    else
-                    {
-                        size.x = MapSize.x - start.x;
-                    }
-
-                    if (inZ)
-                    {
-                        size.y = chunkSize2Use;
-                    }
-                    else
-                    {
-                        size.y = MapSize.y - start.y;
-                    }
-
-                    BoundsInt bounds = new BoundsInt(start, size);
-
-                    chunk = Instantiate(hexChunkPrefab, hexParent.transform);
-                    chunk.Initialize(bounds);
-                    hexChunks.Add(chunk);
-                }
-            }
-
-            //Debug.Log("Chunk Size: " + chunkSize2Use);
-            //Debug.Log("Chunk count: " + hexChunks.Count);
         }
-        public bool UpdateMap = false;
-        public void UpdateHexProperties()
+        public void DrawChunkInstanced()
         {
-            if (!UpdateMap)
-            {
-                SetChildrenStatus(true);
-                return;
-            }
-
-            SetChildrenStatus(false);
-
-            planetGenerator.SetComputeSize();
-            planetGenerator.ComputeBiomeNoise();
-
             // 100 x100 10 fps
             foreach (HexChunk chunk in hexChunks)
             {
-                chunk.RenderMesh();
+                chunk.DrawInstanced();
             }
         }
         private void DestroyChildren()
         {
-            int childCount = hexParent.transform.childCount;
+            int childCount = chunkParent.transform.childCount;
 
-            for (int i = childCount - 1; i >= 0; i--)
+            for (int i = childCount - 1; i > 0; i--)
             {
-                Transform child = hexParent.transform.GetChild(i);
+                Transform child = chunkParent.transform.GetChild(i);
                 DestroyImmediate(child.gameObject);
                 // If you want to use DestroyImmediate instead, replace the line above with:
                 // DestroyImmediate(child.gameObject);
             }
         }
 
-        bool chunkOn = true;
-        private void SetChildrenStatus(bool status)
-        {
-            if (chunkOn == status)
-            {
-                return;
-            }
+        #endregion
 
-            int childCount = hexParent.transform.childCount;
+        #region Chunk Status Methods
+        public void SetAllChunksStatus(bool status)
+        {
+            int childCount = chunkParent.transform.childCount;
 
             for (int i = childCount - 1; i >= 0; i--)
             {
-                Transform child = hexParent.transform.GetChild(i);
+                Transform child = chunkParent.transform.GetChild(i);
                 child.gameObject.SetActive(status);
             }
-
-            chunkOn = status;
+        }
+        public void SetSpecificChunkStatus(HexTile hex, bool status)
+        {
+            hexChunks.First(h => h.IsInChunk(hex)).gameObject.SetActive(status);
+        }
+        public void SetSpecificChunkStatus(HexChunk chunk, bool status)
+        {
+            chunk.gameObject.SetActive(status);
+        }
+        public void SetChunkStatusIfInBounds(Bounds bounds, bool status)
+        {
+            foreach (HexChunk chunk in hexChunks)
+            {
+                if (chunk.IsIntersected(bounds))
+                {
+                    chunk.gameObject.SetActive(status);
+                }
+            }
+        }
+        public void SetChunkStatusIfNotInBounds(Bounds bounds, bool status)
+        {
+            foreach (HexChunk chunk in hexChunks)
+            {
+                if (!chunk.IsIntersected(bounds))
+                {
+                    chunk.gameObject.SetActive(status);
+                }
+            }
         }
 
         #endregion
+
+        #region Get Hex Data
 
         /// <summary>
         /// This is slower because it will loop through all the hexes
         /// </summary>
         /// <param name="coordinates"></param>
         /// <returns></returns>
-        public HexTile GetHexTile(Vector2Int coordinates)
+        ///     
+        public HexTile GetHexTile(Vector2Int position)
         {
             HexTile hex = null;
-            hex = HexTiles.Values.First(h => h.GridCoordinates == coordinates);
+            HexTiles.TryGetValue(position, out hex);
 
-            return hex;
+            if (hex != null)
+            {
+                return hex;
+            }
+
+            throw HexNotFoundException;
         }
-
         /// <summary>
         /// This is the main function to get a hex tiles. Uses a dictionary, so it is super fast
         /// </summary>
-        /// <param name="coordinates"></param>
+        /// <param name="position"></param>
         /// <returns></returns>
-        public HexTile GetHexTile(Axial coordinates)
+        public HexTile GetHexTile(Axial position)
+        {
+            Vector2Int vec = Axial.FromAxial(position);
+
+            HexTile hex = null;
+            HexTiles.TryGetValue(vec, out hex);
+
+            if(hex != null)
+            {
+                return hex;
+            }
+
+            throw HexNotFoundException;
+        }
+        private HexChunk GetHexChunk(Vector2Int position)
+        {
+            // formula is ((y - 1) * xc) + x)
+            // y = position.y / chunkSize
+            // xc = number of chunks in a width. Example, if map width is 100, and chunk width is 25, xc = 100/25 = 4
+            // x = position.x  / chunkSize
+
+            try
+            {
+                int x = Mathf.CeilToInt(position.x / ChunkSize2Use);
+                int y = Mathf.CeilToInt(position.y / ChunkSize2Use);
+
+                int index = (Mathf.Max(0, (y - 1)) * ChunkCount.x) + x;
+                HexChunk chunk = hexChunks[index - 1];
+
+                return hexChunks[index - 1];
+            }
+            catch (Exception)
+            {
+                throw new Exception("Chunk Not Found Exception");
+            }
+        }
+        public HexData GetHexData(Vector2Int position)
         {
             HexTile hex = null;
-            HexTiles.TryGetValue(coordinates, out hex);
 
-            return hex;
+            HexTiles.TryGetValue(position, out hex);
+
+            if(hex != null)
+            {
+                HexChunk chunk = GetHexChunk(position);
+
+                if(chunk != null)
+                {
+                    return new HexData(chunk, hex);
+                }
+            }
+
+            return new HexData();
         }
+        private HexData GetHexDataAtPosition(Vector3 position)
+        {
+            HexData data;
+
+            Ray ray = Camera.main.ScreenPointToRay(position);
+
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, 1000))
+            {
+                HexChunk chunk = hit.collider.GetComponentInParent<HexChunk>();
+
+                if (chunk == null)
+                {
+                    throw HexNotFoundException;
+                }
+
+                // we subtract the position of the chunk because the hexes are positioned relative to the chunk, so if a chunk is at 0,10 and the hex is at 0,0, the hex is actually at 0,10,0 in world position
+
+                HexTile foundHex = chunk.GetClosestHex(hit.point - transform.position);
+
+                data = new HexData(chunk, foundHex);
+
+                return data;
+            }
+
+            throw HexNotFoundException;
+        }
+        private HexData GetHexDataAtMousePosition()
+        {
+            Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+            return GetHexDataAtPosition(mousePosition);
+        }
+        #endregion
+
+        #region Set Hex Visual Data
+        public void GetVisualData(Vector2Int position, out HexVisualData data)
+        {
+            HexTile hex = GetHexTile(position);
+            data = hex.VisualData;
+        }
+
+        public void SetVisualData(Vector2Int position, HexVisualData data)
+        {
+            HexTile hex = GetHexTile(position);
+
+            if (hex != null)
+            {
+                hex.VisualData = data;
+            }
+        }
+
+        public void UpdateVisualData(Vector2Int position)
+        {
+            HexData data = GetHexData(position);
+
+            data.UpdateVisualData();
+        }
+
+        /// <summary>
+        /// Note that the order is from position (0, 0) --> mapsize
+        /// </summary>
+        /// <param name="visualData"></param>
+        public void SetVisualData(Vector2Int[] positions, HexVisualData[] visualData)
+        {
+            if (positions.Length != visualData.Length)
+            {
+                Exception size = new Exception("Length of positions and visual data must be thesame");
+
+                throw size;
+            }
+
+            Parallel.For(0, visualData.Length, i =>
+            {
+                HexTile hex = null;
+
+                HexTiles.TryGetValue(positions[i], out hex);
+
+                if (hex != null)
+                {
+                    hex.VisualData = visualData[i];
+                }
+            });
+        }
+
+        #endregion
+
+
+
+        #region Test Method delete when done
+
+        Dictionary<int, HexData> HighlightedHexes = new Dictionary<int, HexData>();
+        Dictionary<int, HexData> ActivatedBorderHexes = new Dictionary<int, HexData>();
         private void OnMouseClick()
         {
             HexData newData;
@@ -389,12 +563,12 @@ namespace Assets.Scripts.WorldMap
             if (!ActivatedBorderHexes.ContainsKey(newData.Hash))
             {
                 ActivatedBorderHexes.Remove(previousBorder.Hash);
-                
+
                 if (!previousBorder.IsNullOrEmpty())
                 {
                     previousBorder.DeactivateBorder();
                 }
-               
+
                 ActivatedBorderHexes.Add(newData.Hash, newData);
                 newData.ActivateBorder();
                 previousBorder = newData;
@@ -404,8 +578,8 @@ namespace Assets.Scripts.WorldMap
         public void HighlightHex(HexData hex)
         {
             if (hex.IsNullOrEmpty())
-                {
-                    return;
+            {
+                return;
             }
 
             if (!HighlightedHexes.ContainsKey(hex.Hash))
@@ -417,7 +591,6 @@ namespace Assets.Scripts.WorldMap
                 hex.ChangeColor(Color.black);
             }
         }
-
         public void UnHighlightHex(HexData hex)
         {
             if (hex.IsNullOrEmpty())
@@ -431,55 +604,55 @@ namespace Assets.Scripts.WorldMap
                 // hex.UnHighlight();
                 //hex.UnHighlight();
 
-                Color ogColor = hex.hex.DefaultBiomeData.BiomeColor;
+                Color ogColor = Color.red;
 
                 hex.ChangeColor(ogColor);
             }
         }
 
-
-        private HexData GetHexDataAtMousePosition()
-        {
-            HexData data = new HexData();
-
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit, 1000))
-            {
-                HexChunk chunk = hit.collider.GetComponentInParent<HexChunk>();
-
-                if (chunk == null)
-                {
-                    return data;
-                }
-
-                // we subtract the position of the chunk because the hexes are positioned relative to the chunk, so if a chunk is at 0,10 and the hex is at 0,0, the hex is actually at 0,10,0 in world position
-
-                HexTile foundHex = chunk.GetClosestHex(hit.point - transform.position);
-
-                data.chunk = chunk;
-                data.hex = foundHex;
-
-                return data;
-            }
-
-            return data;
-        }
+        #endregion
 
         /// <summary>
-        /// We use this struct to store the data a hex. This way we dont have to find the chunk. Used for highlighting
+        /// We use this struct to store the data of a hex. This way we dont have to find the chunk. Used for highlighting
         /// </summary>
+        /// 
         public struct HexData
         {
-            public HexChunk chunk;
-            public HexTile hex;
+            private HexChunk chunk;
+            private HexTile hex;
             public int Hash { get { return GetHashCode(); } }
+
+            static readonly Exception notInChunk = new Exception("Hex is Not In Chunk");
+            private void ThrowIfInvalid(HexChunk chunk, HexTile hex)
+            {
+                if (!chunk.IsInChunk(hex))
+                {
+                    throw notInChunk;
+                }
+
+                this.chunk = chunk;
+                this.hex = hex;
+            }
             public HexData(HexChunk chunk, HexTile aHex)
             {
+                if(chunk )
+                if (!chunk.IsInChunk(aHex))
+                {
+                    throw notInChunk;
+                }
+
                 this.chunk = chunk;
                 this.hex = aHex;
+            }
+
+            public void SetData(HexChunk chunk, HexTile hex)
+            {
+                ThrowIfInvalid(chunk, hex);
+            }
+
+            public void UpdateVisualData()
+            {
+                chunk.UpdateVisualData(hex);
             }
 
             public void Highlight()
@@ -497,7 +670,6 @@ namespace Assets.Scripts.WorldMap
                     ResetData();
                 }
             }
-
             public void ActivateBorder()
             {
                 if (!IsNullOrEmpty())
@@ -505,7 +677,6 @@ namespace Assets.Scripts.WorldMap
                     chunk.ActivateHexBorder(hex);
                 }
             }
-
             public void DeactivateBorder()
             {
                 if (!IsNullOrEmpty())
@@ -529,8 +700,7 @@ namespace Assets.Scripts.WorldMap
                 {
                     chunk.ChangeColor(hex, color);
                 }
-            } 
-
+            }
             public void ResetData()
             {
                 chunk = null;
@@ -540,12 +710,10 @@ namespace Assets.Scripts.WorldMap
             {
                 return hex1.Equals(hex2);
             }
-
             public static bool operator !=(HexData hex1, HexData hex2)
             {
                 return !hex1.Equals(hex2);
             }
-
             bool Equals(HexData other)
             {
                 if (chunk == other.chunk)
@@ -558,7 +726,6 @@ namespace Assets.Scripts.WorldMap
 
                 return false;
             }
-
             public override bool Equals(object obj)
             {
                 if (obj != null)
@@ -579,7 +746,6 @@ namespace Assets.Scripts.WorldMap
 
                 return false;
             }
-
             public override int GetHashCode()
             {
                 return HashCode.Combine(hex, chunk);
@@ -609,7 +775,7 @@ namespace Assets.Scripts.WorldMap
 
                 if (GUILayout.Button("Generate Grid"))
                 {
-                    exampleScript.GenerateGridChunks();
+                    exampleScript.GenerateGrid();
                 }
             }
         }

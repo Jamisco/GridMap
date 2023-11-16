@@ -71,7 +71,6 @@ namespace Assets.Scripts.WorldMap
 
         [SerializeField] Vector2Int oceanOffset;
 
-
         private void Awake()
         {
             UpdateNoise();
@@ -496,18 +495,20 @@ namespace Assets.Scripts.WorldMap
             
         }
 
-        public BiomeData GetBiomeProperties(int x, int y)
+        [SerializeField] private Texture2D weather;
+
+        public BiomeData GetBiomeData(int x, int y)
         {
             float temp = GetTemperature(x, y);
             float precip = GetPrecipitation(x, y);
-            
+
             float land = GetLand(x, y);
             float ocean = GetOcean(x, y);
 
             SurfaceType surfaceType;
             float surface = 0;
-            
-            if(ocean > land)
+
+            if (ocean > land)
             {
                 surfaceType = SurfaceType.Marine;
                 surface = ocean;
@@ -520,7 +521,47 @@ namespace Assets.Scripts.WorldMap
 
             GridValues gridValues = new GridValues(temp, precip, surface, surfaceType);
 
-            return MainPlanet.GetBiomeData(gridValues);
+            BiomeData data = MainPlanet.GetBiomeData(gridValues);
+
+            if (x == 50 && y == 50)
+            {
+                float intensity = MainPlanet.GetIntensity(x, y);
+
+                //data.SetBiomeColor(Color.Lerp(data.HexColor, Color.red, intensity));
+
+                Texture2D snowMask = GenerateRandomMask(weather.height, weather.width, intensity);
+
+                data.SetWeatherTexture(snowMask);
+            }
+
+            return data;
+        }
+
+        public BiomeData GetBiomeData(Vector2Int position)
+        {
+            return GetBiomeData(position.x, position.y);
+        }
+
+        public float multiplier = 1;
+
+        public Texture2D GenerateRandomMask(int width, int height, float scale)
+        {
+            Texture2D texture = new Texture2D(width, height);
+
+            scale *= multiplier;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    float value = Mathf.PerlinNoise(x / (float)width * scale, y / (float)height * scale);
+                    Color pixelColor = new Color(value, value, value);
+                    texture.SetPixel(x, y, pixelColor);
+                }
+            }
+
+            texture.Apply();
+            return texture;
         }
 
         public struct GridValues

@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Assets.Scripts.Miscellaneous;
+using static Assets.Scripts.WorldMap.GridManager;
 
 namespace Assets.Scripts.WorldMap
 {
@@ -62,9 +63,13 @@ namespace Assets.Scripts.WorldMap
             int x = int.Parse(xInput.text);
             int y = int.Parse(yInput.text);
 
-            gridManager.planetGenerator.MainPlanet.PlanetSize = new Vector2Int(x, y);
-            
-            gridManager.GenerateGridChunks();
+            GridData data = gridManager.GridInfo;
+
+            data.MapSize = new Vector2Int(x, y);
+
+            gridManager.GridInfo = data;
+
+            gridManager.GenerateGrid(true);
 
             string parseTime = ExtensionMethods.ParseLogTimer("", gridManager.time);
 

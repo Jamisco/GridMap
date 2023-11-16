@@ -27,7 +27,7 @@ namespace Assets.Scripts.WorldMap
         [Range(0, 13)]
         public float SunlightIntensity;
 
-        public float SunlightArea;
+        public float SunlightRadius;
 
         [Range(10, 365)]
         public int DaysInYear;
@@ -61,13 +61,25 @@ namespace Assets.Scripts.WorldMap
                 return new Vector2Int(x, y);
             }
         }
-
-        public void InitializeBiomeData()
+        public float GetIntensity(Vector2Int position)
         {
-            
-        }
-        
+            float distance = Vector2Int.Distance(position, CurrentSunRayFocus);
 
+            if (distance > SunlightRadius)
+            {
+                return 1;
+            }
+
+            float intensity = distance / SunlightRadius;
+
+            intensity = Mathf.Clamp(intensity, 0, 1);
+
+            return intensity;
+        }
+        public float GetIntensity(int x, int y)
+        {
+            return GetIntensity(new Vector2Int(x, y));
+        }
         public BiomeData GetBiomeData(GridValues gridValues)
         {
             BiomeData biomeData;
@@ -82,13 +94,15 @@ namespace Assets.Scripts.WorldMap
             }
 
             return biomeData;
-        }
-        
+        }   
         public enum SurfaceType
         {
             Terrestrial,
             Marine
         }
+
+        // find way to hit add snow to tiles
+        // figure out tessalation
 
     }
 }
