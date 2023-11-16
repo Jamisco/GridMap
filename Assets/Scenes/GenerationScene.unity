@@ -204,6 +204,121 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 110457459}
   m_CullTransparentMesh: 1
+--- !u!1 &120792596
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 120792601}
+  - component: {fileID: 120792600}
+  - component: {fileID: 120792599}
+  - component: {fileID: 120792598}
+  - component: {fileID: 120792597}
+  m_Layer: 0
+  m_Name: HexChunkPrefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &120792597
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120792596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14a4c236ba44e6d46854b30a31ae186e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  StartPosition: {x: 0, y: 0}
+  ChunkBounds:
+    m_Position: {x: 0, y: 0, z: 0}
+    m_Size: {x: 0, y: 0, z: 0}
+--- !u!64 &120792598
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120792596}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 0}
+--- !u!23 &120792599
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120792596}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &120792600
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120792596}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &120792601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120792596}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1453448159}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &130802850
 GameObject:
   m_ObjectHideFlags: 0
@@ -1136,6 +1251,37 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &675160091
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 675160092}
+  m_Layer: 0
+  m_Name: HexParent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &675160092
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 675160091}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1453448159}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1036963496
 GameObject:
   m_ObjectHideFlags: 0
@@ -1531,27 +1677,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14a4c236ba44e6d46854b30a31ae186e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SpawnPosition:
-    e00: 1
-    e01: 0
-    e02: 0
-    e03: 0
-    e10: 0
-    e11: 1
-    e12: 0
-    e13: 0
-    e20: 0
-    e21: 0
-    e22: 1
-    e23: 0
-    e30: 0
-    e31: 0
-    e32: 0
-    e33: 1
-  MainGrid: {fileID: 0}
-  MainMaterial: {fileID: 0}
-  InstanceMaterial: {fileID: 0}
-  hexSettings: {fileID: 0}
   StartPosition: {x: 15, y: 0}
   ChunkBounds:
     m_Position: {x: 0, y: 0, z: 0}
@@ -1808,6 +1933,7 @@ GameObject:
   - component: {fileID: 1453448159}
   - component: {fileID: 1453448158}
   - component: {fileID: 1453448157}
+  - component: {fileID: 1453448160}
   m_Layer: 0
   m_Name: GridSpawner
   m_TagString: Untagged
@@ -1827,13 +1953,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e3aed3303379304582644023e611b2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  planetGenerator: {fileID: 0}
   GridInfo:
+    MaxHexPerChunk: 1000
+    MapSize: {x: 100, y: 100}
     HexSettings: {fileID: 11400000, guid: c966756f1912d5a45a766bb5fef9cf23, type: 2}
-    BiomeDataStorage: {fileID: 11400000, guid: 6f195cc767060ae42af839ec3c479579, type: 2}
     MainMaterial: {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
     InstanceMaterial: {fileID: 2100000, guid: 876cd32450d0f1a48835980ee51786b2, type: 2}
-    MaxHexPerChunk: 1000
 --- !u!114 &1453448158
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1846,7 +1971,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f31964a3dd81e4b48bdc5968f532b3ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  manager: {fileID: 1605946130}
+  manager: {fileID: 1453448157}
 --- !u!4 &1453448159
 Transform:
   m_ObjectHideFlags: 0
@@ -1858,10 +1983,60 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 675160092}
+  - {fileID: 120792601}
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1453448160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453448156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b389b3b5d7bd7e4390e8910edd548d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MainPlanet:
+    PlanetSize: {x: 100, y: 100}
+    InitialSunRayFocus: {x: 50, y: 50}
+    SunlightVector: {x: 1, y: 1}
+    SunlightIntensity: 1
+    SunlightRadius: 25
+    DaysInYear: 10
+    currentDay: 0
+  CircularSun: 0
+  VerticalSun: 0
+  planetFractal: 1
+  PrintArrays: 0
+  RandomBiomeColor: 0
+  LandSeed: 1592
+  LandFrequemcy: 0.01
+  LFractal: 3
+  LNoise: 3
+  landMultiplier: 1.66
+  landLevelScale: 1.31
+  landOffset: {x: 0, y: 0}
+  OceanSeed: 1337
+  OceanFrequemcy: 0.01
+  OFractal: 1
+  ONoise: 3
+  marineMultiplier: 1
+  marineLevelScale: 0
+  marineLevel: 0
+  oceanOffset: {x: 0, y: 0}
+  minTemperature: 0
+  TemperatureMultiplier: 1
+  precipitationScale: 1
+  minPrecipitation: 0
+  rainMultiplier: 1
+  pOffset: {x: 0, y: 0}
+  weather: {fileID: 2800000, guid: 34bc1c82251d51d47b35c7d1c56b6486, type: 3}
+  multiplier: 1
 --- !u!1 &1587766257
 GameObject:
   m_ObjectHideFlags: 0
@@ -1931,13 +2106,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e3aed3303379304582644023e611b2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  planetGenerator: {fileID: 1605946132}
   GridInfo:
+    MaxHexPerChunk: 0
+    MapSize: {x: 0, y: 0}
     HexSettings: {fileID: 0}
-    BiomeDataStorage: {fileID: 0}
     MainMaterial: {fileID: 0}
     InstanceMaterial: {fileID: 0}
-    MaxHexPerChunk: 0
 --- !u!4 &1605946131
 Transform:
   m_ObjectHideFlags: 0
