@@ -1,6 +1,7 @@
 ﻿using Assets.Scripts.Miscellaneous;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -368,15 +369,15 @@ namespace Assets.Scripts.WorldMap
         // We should pass the planet instead
 
         Random random = new Random();
-        public static void CreateSlopes(Dictionary<Axial, HexTile> hexes)
-        {
-            Parallel.ForEach(hexes.Values, (hexTile) =>
-            {
-                hexTile.CreateSlopeMesh();
-            });
+        ///public static void CreateSlopes(Dictionary<Axial, HexTile> hexes)
+        //{
+        //    Parallel.ForEach(hexes.Values, (hexTile) =>
+        //    {
+        //        hexTile.CreateSlopeMesh();
+        //    });
 
-        }
-        public static Dictionary<Vector2Int, HexTile> CreatesHexes(Vector2Int MapSize, ref List<HexChunk> hexChunks, GridManager grid)
+        //}
+        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, ref List<HexChunk> hexChunks, List<HexVisualData> data = null)
         {
             // we define the size of the dictionary to avoid resizing it, which slows things down
             Dictionary<Vector2Int, HexTile> hexTiles = new Dictionary<Vector2Int, HexTile>(MapSize.x * MapSize.y + 10);
@@ -439,6 +440,8 @@ namespace Assets.Scripts.WorldMap
             // For loop: 7 seconds
             // Parrellel foreach/for 15 - 16 seconds
 
+            int count = 0;
+
             for (int chunkIndex = 0; chunkIndex < hexChunks.Count; chunkIndex++)
             {
                 HexChunk chunk = hexChunks[chunkIndex];
@@ -454,6 +457,12 @@ namespace Assets.Scripts.WorldMap
                         HexTile hc = new HexTile(x, z, grid);
 
                         hexTiles[hc.GridCoordinates] = hc;
+
+                        if(data != null)
+                        {
+                            hc.VisualData = data.ElementAtOrDefault(count);
+                            count++;
+                        }
 
                         chunk.AddHex(hc);
                     }
@@ -511,126 +520,126 @@ namespace Assets.Scripts.WorldMap
         }
 
         // To Do update this to use Y position
-        public void CreateSlopeMesh()
-        {
-            if (hexSettings.stepDistance == 0 && hexSettings.maxHeight == 0)
-            {
-                // there are no slopes
-                return;
-            }
+        //public void CreateSlopeMesh()
+        //{
+        //    if (hexSettings.stepDistance == 0 && hexSettings.maxHeight == 0)
+        //    {
+        //        // there are no slopes
+        //        return;
+        //    }
 
-            SlopeVertices.Clear();
-            SlopeTriangles.Clear();
+        //    SlopeVertices.Clear();
+        //    SlopeTriangles.Clear();
 
-            List<HexTile> surroundingHex = GetSurroundingHexes();
+        //    List<HexTile> surroundingHex = GetSurroundingHexes();
 
-            for (int i = 0; i < 6; i++)
-            {
-                HexTile hex1 = surroundingHex[i];
+        //    for (int i = 0; i < 6; i++)
+        //    {
+        //        HexTile hex1 = surroundingHex[i];
 
-                if (hex1 == null)
-                {
-                    continue;
-                }
+        //        if (hex1 == null)
+        //        {
+        //            continue;
+        //        }
 
-                // p1 and p2 denote the 2 points on the current i side in clockwise order
+        //        // p1 and p2 denote the 2 points on the current i side in clockwise order
 
-                int p1 = i;
-                // so the last one loops back to the first one
-                int p2 = (i + 1) % 6;
+        //        int p1 = i;
+        //        // so the last one loops back to the first one
+        //        int p2 = (i + 1) % 6;
 
-                Vector3 pos1 = Vertices[p1];
-                Vector3 pos2 = Vertices[p2];
+        //        Vector3 pos1 = Vertices[p1];
+        //        Vector3 pos2 = Vertices[p2];
 
-                // the current hex1's i vertices
-                Vector3 pos3 = StepOuterVertexPosition(i) + Vertices[p1];
-                Vector3 pos4 = StepOuterVertexPosition(i) + Vertices[p2];
+        //        // the current hex1's i vertices
+        //        Vector3 pos3 = StepOuterVertexPosition(i) + Vertices[p1];
+        //        Vector3 pos4 = StepOuterVertexPosition(i) + Vertices[p2];
 
-                pos3.y -= (Position.y - hex1.Position.y) / 2;
-                pos4.y -= (Position.y - hex1.Position.y) / 2;
+        //        pos3.y -= (Position.y - hex1.Position.y) / 2;
+        //        pos4.y -= (Position.y - hex1.Position.y) / 2;
 
-                int sv = SlopeVertices.Count + Vertices.Count;
+        //        int sv = SlopeVertices.Count + Vertices.Count;
 
-                SlopeVertices.Add(pos1); // sv + 0
-                SlopeVertices.Add(pos2); // sv + 1
+        //        SlopeVertices.Add(pos1); // sv + 0
+        //        SlopeVertices.Add(pos2); // sv + 1
 
-                SlopeVertices.Add(pos3); // sv + 2
-                SlopeVertices.Add(pos4); // sv + 3
+        //        SlopeVertices.Add(pos3); // sv + 2
+        //        SlopeVertices.Add(pos4); // sv + 3
 
-                SlopeTriangles.AddRange(new int[6] {
-                        sv + 0, sv + 2, sv + 3,
-                        sv + 0, sv + 3, sv + 1
-                    });
+        //        SlopeTriangles.AddRange(new int[6] {
+        //                sv + 0, sv + 2, sv + 3,
+        //                sv + 0, sv + 3, sv + 1
+        //            });
 
-                float heightDiff = Mathf.Abs(hex1.Position.y - Position.y);
+        //        float heightDiff = Mathf.Abs(hex1.Position.y - Position.y);
 
-                SlopeUV.AddRange(hexSettings.GetSlopeUV(heightDiff));
+        //        SlopeUV.AddRange(hexSettings.GetSlopeUV(heightDiff));
 
-                // Check for next surrounding hex1
-                // if it exist, add triangle
-                // we do this bcuz there is a little gap between the 2 slope of the hex
+        //        // Check for next surrounding hex1
+        //        // if it exist, add triangle
+        //        // we do this bcuz there is a little gap between the 2 slope of the hex
 
-                // next surrounding hex1
-                int nextSide = (i + 1) % 6;
+        //        // next surrounding hex1
+        //        int nextSide = (i + 1) % 6;
 
-                HexTile hex2 = surroundingHex[nextSide];
+        //        HexTile hex2 = surroundingHex[nextSide];
 
-                Vector3 center;
-                Vector3 IPos3;
+        //        Vector3 center;
+        //        Vector3 IPos3;
 
-                if (hex2 != null && true)
-                {
-                    // hex2 connecting vertex
-                    IPos3 = StepOuterVertexPosition(nextSide) + Vertices[p2];
-                    IPos3.y -= (Position.y - hex2.Position.y) / 2;
+        //        if (hex2 != null && true)
+        //        {
+        //            // hex2 connecting vertex
+        //            IPos3 = StepOuterVertexPosition(nextSide) + Vertices[p2];
+        //            IPos3.y -= (Position.y - hex2.Position.y) / 2;
 
-                    Vector3 hex1Corner, hex2Corner;
+        //            Vector3 hex1Corner, hex2Corner;
 
-                    // the corners of the surrounding hex, so we can get their centers
-                    hex1Corner = StepOuterVertexPosition(i) * 2 + pos2;
-                    hex2Corner = StepOuterVertexPosition(nextSide) * 2 + pos2;
+        //            // the corners of the surrounding hex, so we can get their centers
+        //            hex1Corner = StepOuterVertexPosition(i) * 2 + pos2;
+        //            hex2Corner = StepOuterVertexPosition(nextSide) * 2 + pos2;
 
-                    hex1Corner.y -= (Position.y - hex1.Position.y);
-                    hex2Corner.y -= (Position.y - hex2.Position.y);
+        //            hex1Corner.y -= (Position.y - hex1.Position.y);
+        //            hex2Corner.y -= (Position.y - hex2.Position.y);
 
-                    center = GetTriangleCenter(pos2, hex1Corner, hex2Corner);
+        //            center = GetTriangleCenter(pos2, hex1Corner, hex2Corner);
 
-                    // sv + 1 = pos2 (current hex 2 vertex for slope)
-                    // sv + 3 = pos4 (current hex last slope vertex)
+        //            // sv + 1 = pos2 (current hex 2 vertex for slope)
+        //            // sv + 3 = pos4 (current hex last slope vertex)
 
-                    SlopeVertices.Add(IPos3); // sv + 4
-                    SlopeVertices.Add(center); // sv + 5
+        //            SlopeVertices.Add(IPos3); // sv + 4
+        //            SlopeVertices.Add(center); // sv + 5
 
-                    // SlopeUV.Add(new Vector2()
+        //            // SlopeUV.Add(new Vector2()
 
-                    SlopeTriangles.AddRange(new int[6] {
-                        sv + 1, sv + 3, sv + 4,
-                        sv + 3, sv + 5, sv + 4
-                    });
+        //            SlopeTriangles.AddRange(new int[6] {
+        //                sv + 1, sv + 3, sv + 4,
+        //                sv + 3, sv + 5, sv + 4
+        //            });
 
-                    SlopeUV.AddRange(hexSettings.GetMidTriangleSlopeUV(heightDiff));
-                }
+        //            SlopeUV.AddRange(hexSettings.GetMidTriangleSlopeUV(heightDiff));
+        //        }
 
-                Vector3 GetTriangleCenter(Vector3 pos1, Vector3 pos2, Vector3 pos3)
-                {
-                    return (pos1 + pos2 + pos3) / 3f;
-                }
-            }
-        }
-        public List<HexTile> GetSurroundingHexes()
-        {
-            List<HexTile> surroundingHexs = new List<HexTile>();
+        //        Vector3 GetTriangleCenter(Vector3 pos1, Vector3 pos2, Vector3 pos3)
+        //        {
+        //            return (pos1 + pos2 + pos3) / 3f;
+        //        }
+        //    }
+        //}
+        //public List<HexTile> GetSurroundingHexes()
+        //{
+        //    List<HexTile> surroundingHexs = new List<HexTile>();
 
-            for (int i = 0; i < 6; i++)
-            {
-                Axial sPos = AxialCoordinates + SurroundingHexes[i];
+        //    for (int i = 0; i < 6; i++)
+        //    {
+        //        Axial sPos = AxialCoordinates + SurroundingHexes[i];
 
-                // will include null
-                surroundingHexs.Add(Grid.GetHexTile(sPos));
-            }
+        //        will include null
+        //        surroundingHexs.Add(Grid.GetHexTile(sPos));
+        //    }
 
-            return surroundingHexs;
-        }
+        //    return surroundingHexs;
+        //}
 
         Mesh mesh;
         public Mesh GetMesh()

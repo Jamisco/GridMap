@@ -7,7 +7,6 @@ using UnityEngine;
 using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
 using static Assets.Scripts.WorldMap.HexTile;
 using static Assets.Scripts.Miscellaneous.ExtensionMethods;
-using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody.BiomeData;
 using static Assets.Scripts.WorldMap.FusedMesh;
 using Unity.VisualScripting;
 using static Assets.Scripts.WorldMap.GridManager;

@@ -61,6 +61,7 @@ namespace Assets.Scripts.WorldMap
                 return new Vector2Int(x, y);
             }
         }
+        
         public float GetIntensity(Vector2Int position)
         {
             float distance = Vector2Int.Distance(position, CurrentSunRayFocus);

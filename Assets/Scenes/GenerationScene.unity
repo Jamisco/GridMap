@@ -1953,12 +1953,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e3aed3303379304582644023e611b2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GridInfo:
-    MaxHexPerChunk: 1000
-    MapSize: {x: 100, y: 100}
-    HexSettings: {fileID: 11400000, guid: c966756f1912d5a45a766bb5fef9cf23, type: 2}
-    MainMaterial: {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
-    InstanceMaterial: {fileID: 2100000, guid: 876cd32450d0f1a48835980ee51786b2, type: 2}
 --- !u!114 &1453448158
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1972,6 +1966,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   manager: {fileID: 1453448157}
+  planet: {fileID: 0}
+  gridData:
+    MaxHexPerChunk: 1000
+    MapSize: {x: 100, y: 100}
+    HexSettings: {fileID: 11400000, guid: c966756f1912d5a45a766bb5fef9cf23, type: 2}
+    MainMaterial: {fileID: 2100000, guid: 1ce1c2e14903de741ae3026f3330e7bb, type: 2}
+    InstanceMaterial: {fileID: 2100000, guid: 876cd32450d0f1a48835980ee51786b2, type: 2}
+  useColor: 1
 --- !u!4 &1453448159
 Transform:
   m_ObjectHideFlags: 0
@@ -2001,6 +2003,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b389b3b5d7bd7e4390e8910edd548d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  biomeDataStorage: {fileID: 11400000, guid: 6f195cc767060ae42af839ec3c479579, type: 2}
   MainPlanet:
     PlanetSize: {x: 100, y: 100}
     InitialSunRayFocus: {x: 50, y: 50}
@@ -2106,12 +2109,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e3aed3303379304582644023e611b2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GridInfo:
-    MaxHexPerChunk: 0
-    MapSize: {x: 0, y: 0}
-    HexSettings: {fileID: 0}
-    MainMaterial: {fileID: 0}
-    InstanceMaterial: {fileID: 0}
 --- !u!4 &1605946131
 Transform:
   m_ObjectHideFlags: 0
@@ -2139,6 +2136,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b389b3b5d7bd7e4390e8910edd548d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  biomeDataStorage: {fileID: 0}
   MainPlanet:
     PlanetSize: {x: 100, y: 100}
     InitialSunRayFocus: {x: 50, y: 50}

@@ -63,13 +63,10 @@ namespace Assets.Scripts.WorldMap
             int x = int.Parse(xInput.text);
             int y = int.Parse(yInput.text);
 
-            GridData data = gridManager.GridInfo;
-
+            GridData data = gridManager.Data;
             data.MapSize = new Vector2Int(x, y);
 
-            gridManager.GridInfo = data;
-
-            gridManager.GenerateGrid(true);
+            gridManager.InitializeGrid(data);
 
             string parseTime = ExtensionMethods.ParseLogTimer("", gridManager.time);
 

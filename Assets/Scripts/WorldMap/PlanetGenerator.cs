@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
+using static Assets.Scripts.WorldMap.HexTile;
 using static Assets.Scripts.WorldMap.Planet;
 using static FastNoiseLite;
 using Debug = UnityEngine.Debug;
@@ -18,6 +19,8 @@ namespace Assets.Scripts.WorldMap
 {
     public class PlanetGenerator : MonoBehaviour
     {
+        [SerializeField] BiomeDataStorage biomeDataStorage;
+        
         [SerializeField] public Planet MainPlanet;
         [SerializeField] public bool CircularSun = false;
         [SerializeField] public bool VerticalSun = false;
@@ -74,6 +77,7 @@ namespace Assets.Scripts.WorldMap
         private void Awake()
         {
             UpdateNoise();
+            SurfaceBody.SetBiomeData(biomeDataStorage.GetData());
         }
 
         public Vector2Int PlanetSize
@@ -81,7 +85,8 @@ namespace Assets.Scripts.WorldMap
             get
             {
                 return MainPlanet.PlanetSize;
-            }            
+            } 
+            
         }
 
         private void UpdateNoise()
@@ -118,8 +123,12 @@ namespace Assets.Scripts.WorldMap
         private List<int> TemperatureStore = new List<int>(); // 2
         private List<int> OceanStore = new List<int>(); // 3
 
-
-        public void SetComputeSize()
+        public void GenerateData()
+        {
+            SetComputeSize();
+            ComputeBiomeNoise();
+        }
+        private void SetComputeSize()
         {
             PlanetTemperature = new float[MainPlanet.PlanetSize.x, MainPlanet.PlanetSize.y];
             PlanetPrecipitation = new float[MainPlanet.PlanetSize.x, MainPlanet.PlanetSize.y];
@@ -158,7 +167,7 @@ namespace Assets.Scripts.WorldMap
         float[,] PlanetTemperature;
         float[,] PlanetPrecipitation;
         
-        public void ComputeBiomeNoise()
+        private void ComputeBiomeNoise()
         {
             //test.Restart();
             
@@ -178,7 +187,6 @@ namespace Assets.Scripts.WorldMap
            // Debug.Log("ComputeBiomeNoise Took: " + test.ElapsedMilliseconds / 1000f + "s");
 
         }
-
         private void ComputeTemperatureNoise(int x, int y)
         {
            float temp = IntensityFromSunrayFocus(new Vector2Int(x, y));
@@ -373,6 +381,20 @@ namespace Assets.Scripts.WorldMap
             return Mathf.PerlinNoise(x, y);
         }
 
+        public List<BiomeData> GetAllBiomes()
+        {
+            List<BiomeData> datas = new List<BiomeData>();
+
+            for(int x = 0; x < MainPlanet.PlanetSize.x; x++)
+            {
+                for (int y = 0; y < MainPlanet.PlanetSize.y; y++)
+                {
+                    datas.Add(GetBiomeData(x, y));
+                }
+            }
+
+            return datas;
+        }
 
 
         private void DistributionOfValues(int arrayType, float value)
