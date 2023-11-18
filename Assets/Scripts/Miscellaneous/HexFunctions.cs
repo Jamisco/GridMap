@@ -389,7 +389,6 @@ namespace Assets.Scripts.Miscellaneous
 
             int distanceX = 0;
             int distanceY = 0;
-            int distanceZ = 0;
 
             // When wrapping values across the map for any axis, do not account for the Z values
             // since wrapping only takes place across a 2d axis, we only need to account for X and Y axis
@@ -401,18 +400,15 @@ namespace Assets.Scripts.Miscellaneous
 
                     distanceX = GetWrappedShortestDistance(maxSize.x, start.x, stop.x);
                     distanceY = GetShortestDistance(start.y, stop.y);
-                    distanceZ = 0;
 
                     break;
                 case Edges.Vertical:
                     distanceX = GetShortestDistance(start.x, stop.x);
                     distanceY = GetWrappedShortestDistance(maxSize.y, start.y, stop.y);
-                    distanceZ = 0;
                     break;
                 case Edges.Both:
                     distanceX = GetWrappedShortestDistance(maxSize.x, start.x, stop.x);
                     distanceY = GetWrappedShortestDistance(maxSize.y, start.y, stop.y);
-                    distanceZ = 0;
                     break;
                 default:
                     break;

@@ -33,16 +33,21 @@ public class GridSpawner : MonoBehaviour
         manager = GetComponent<GridManager>();
         planet = GetComponent<PlanetGenerator>();
 
-        List<HexVisualData> visualData = new List<HexVisualData>();
+        List<HexVisualData> visualData;
+
+        mapSize = gridData.MapSize;
+        
+        planet.MainPlanet.PlanetSize = gridData.MapSize;
+        planet.GenerateData();
+
+        visualData = ConvertToHexVisual(planet.GetAllBiomes());
 
         manager.InitializeGrid(gridData, visualData);
         
-        mapSize = gridData.MapSize;
-        planet.MainPlanet.PlanetSize = gridData.MapSize;
-
-        SetHexVisualData();
-
         manager.GenerateGrid();
+
+        //SetHexVisualData();
+
     }
 
     void SetHexVisualData()
@@ -82,7 +87,7 @@ public class GridSpawner : MonoBehaviour
     {
         HexVisualData hData = new HexVisualData(data.BiomeColor,
                               data.WeatherTexture, null, 0f);
-
+        
         if (useColor)
         {
             hData.SetVisualOption(HexVisualOption.Color);

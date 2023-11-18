@@ -440,8 +440,6 @@ namespace Assets.Scripts.WorldMap
             // For loop: 7 seconds
             // Parrellel foreach/for 15 - 16 seconds
 
-            int count = 0;
-
             for (int chunkIndex = 0; chunkIndex < hexChunks.Count; chunkIndex++)
             {
                 HexChunk chunk = hexChunks[chunkIndex];
@@ -460,8 +458,11 @@ namespace Assets.Scripts.WorldMap
 
                         if(data != null)
                         {
-                            hc.VisualData = data.ElementAtOrDefault(count);
-                            count++;
+                            // based on the grid position of the hex, we can calculate the index of the hex in the data list... assuming it is in order of (0, 0) (0, 1) (0, 2) ... (mapSize.x, mapSize.y)
+
+                            int index = (z * MapSize.x) + x;
+                            
+                            hc.VisualData = data.ElementAtOrDefault(index);
                         }
 
                         chunk.AddHex(hc);

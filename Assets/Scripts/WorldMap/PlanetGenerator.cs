@@ -328,9 +328,6 @@ namespace Assets.Scripts.WorldMap
         private void ComputeLandNoise(int x, int y)
         {
             float tempNoise = 0;
-            float tempNoise2 = 0;
-
-            float divisor = 0;
             float adder = 0;
             float multiplier = 0;
 
