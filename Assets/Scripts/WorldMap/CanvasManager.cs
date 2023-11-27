@@ -64,7 +64,7 @@ namespace Assets.Scripts.WorldMap
             int y = int.Parse(yInput.text);
 
             GridData data = gridManager.Data;
-            data.MapSize = new Vector2Int(x, y);
+            data.GridSize = new Vector2Int(x, y);
 
             gridManager.InitializeGrid(data);
 

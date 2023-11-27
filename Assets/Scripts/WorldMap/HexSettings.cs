@@ -13,7 +13,10 @@ namespace Assets.Scripts.WorldMap
     [CreateAssetMenu(fileName = "HexSettings", menuName = "Hex/Settings", order = 1)]
     public class HexSettings : ScriptableObject
     {
+        [Tooltip("The Distance from Center to Corner(straight line)  of the Hex")]
         public float outerRadius = 10f;
+
+        [Tooltip("The Distance from Center to Edge(points/Vertexes) of the Hex")]
         public float innerRadius;
 
         public float outerHexMultiplier = 1f;

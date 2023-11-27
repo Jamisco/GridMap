@@ -19,5 +19,5 @@ MonoBehaviour:
   innerHexSize: 0.2
   outerHexSize: 0.05
   maxHeight: 0
-  InnerHighlightColor: {r: 1, g: 0, b: 0.20553637, a: 1}
+  InnerHighlightColor: {r: 0, g: 1, b: 0.112401724, a: 1}
   OuterHighlightColor: {r: 0, g: 0.08512545, b: 1, a: 1}

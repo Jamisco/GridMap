@@ -21,7 +21,7 @@ namespace Assets.Scripts.WorldMap
     [RequireComponent(typeof(MeshCollider))]
     public class HexChunk : MonoBehaviour
     {
-        // since the hexes positions are set regardless of the position of the chunk, we simply spawn the chunk at 0,0
+        // since the hexes positions are set regardless of the gridPosition of the chunk, we simply spawn the chunk at 0,0
         private Matrix4x4 SpawnPosition = Matrix4x4.Translate(Vector3.zero);
 
         private GridManager MainGrid;
@@ -48,10 +48,32 @@ namespace Assets.Scripts.WorldMap
         private static readonly Vector3 BorderLayerOffset = new Vector3(0, .002f, 0);
 
 
-        // you must be aware that technically speaking, all these chunks are at position (0,0). It is their meshes/hexes that are place appriopriately
-        public Vector2Int StartPosition;
+        // you must be aware that technically speaking, all these chunks are at gridPosition (0,0). It is their meshes/hexes that are place appriopriately
+        private Vector2Int StartPosition;
+        
+        /// <summary>
+        /// DO NOT USE THIS TO CHECK IF A SPECIFIC HEX/COORDINATES IS IN THE CHUNK.
+        /// Does not work for an unknown reason
+        /// </summary>
         public BoundsInt ChunkBounds;
-        private Bounds boundsCheck;
+
+        /// <summary>
+        /// Use this to check if a grid position is in the chunk
+        /// </summary>
+        public Bounds GridBounds
+        {
+            get
+            {
+                return new Bounds(ChunkBounds.center, ChunkBounds.size);
+            }
+        }
+        public Bounds WorldBounds
+        {
+            get
+            {
+                return meshRenderer.bounds;
+            }
+        }
 
         RenderParams renderParams;
         RenderParams instanceParam;
@@ -59,53 +81,61 @@ namespace Assets.Scripts.WorldMap
         MeshFilter BorderMeshFilter;
         MeshFilter HighlightMeshFilter;
 
+        MeshRenderer meshRenderer;
+
 
         GameObject BorderLayer;
         GameObject HighlightLayer;
 
         FusedMesh HighlightedHexes;
         FusedMesh ActiveHexBorders;
-        
+
+        private readonly Material defaultSprite;
         private void CreateLayerObjects()
         {
-            BorderLayer = new GameObject("BorderLayer");
-            HighlightLayer = new GameObject("HighlightLayer");
+            if (BorderLayer == null)
+            {
+                BorderLayer = new GameObject("BorderLayer");
+                BorderLayer.transform.SetParent(transform);
+                BorderLayer.transform.position += BorderLayerOffset;
+                
+                BorderMeshFilter = BorderLayer.AddComponent<MeshFilter>();
+                BorderLayer.AddComponent<MeshRenderer>();
 
-            BorderLayer.transform.SetParent(transform);
-            HighlightLayer.transform.SetParent(transform);
+                //BorderMeshFilter.mesh.MarkDynamic();
+            }
 
-            BorderLayer.transform.position += BorderLayerOffset;
-            HighlightLayer.transform.position += HighlightLayerOffset;
+            if (HighlightLayer == null)
+            {
+                HighlightLayer = new GameObject("HighlightLayer");
 
-            HighlightMeshFilter = HighlightLayer.AddComponent<MeshFilter>();
-            HighlightMeshFilter.mesh.MarkDynamic();
+                HighlightLayer.transform.SetParent(transform);
 
-            BorderMeshFilter = BorderLayer.AddComponent<MeshFilter>();
-            BorderMeshFilter.mesh.MarkDynamic();
+                HighlightLayer.transform.position += HighlightLayerOffset;
+
+                HighlightMeshFilter = HighlightLayer.AddComponent<MeshFilter>();
+                HighlightLayer.AddComponent<MeshRenderer>();
+
+               // HighlightMeshFilter.mesh.MarkDynamic();
+            }
         }
-        private void Awake()
+        public void Initialize(GridManager grid, ref GridData gridData, BoundsInt aBounds)
         {
             CreateLayerObjects();
-
-            BorderLayer = gameObject.GetGameObject("BorderLayer");
-            HighlightLayer = gameObject.GetGameObject("HighlightLayer");
-
-            BorderLayer.transform.position += BorderLayerOffset;
-            HighlightLayer.transform.position += HighlightLayerOffset;
-
-            HighlightMeshFilter = HighlightLayer.GetComponent<MeshFilter>();
-            HighlightMeshFilter.mesh.MarkDynamic();
-
-            BorderMeshFilter = BorderLayer.GetComponent<MeshFilter>();
-            BorderMeshFilter.mesh.MarkDynamic();
-        }
-        public void Initialize(GridManager grid, GridData gridData, BoundsInt aBounds)
-        {
+            
+            hexSettings = gridData.HexSettings;
+            
             MainMaterial = gridData.MainMaterial;
             InstanceMaterial = gridData.InstanceMaterial;
 
             renderParams = new RenderParams(MainMaterial);
             instanceParam = new RenderParams(InstanceMaterial);
+
+            BorderLayer.GetComponent<MeshRenderer>().material = gridData.Sprites_Default;
+            HighlightLayer.GetComponent<MeshRenderer>().material = gridData.Sprites_Default;
+
+
+            meshRenderer = GetComponent<MeshRenderer>();
 
             MainGrid = grid;
 
@@ -117,7 +147,10 @@ namespace Assets.Scripts.WorldMap
             HighlightedHexes = new FusedMesh();
             ActiveHexBorders = new FusedMesh();
 
-            boundsCheck = new Bounds(ChunkBounds.center, ChunkBounds.size);
+            Vector2Int minHex = new Vector2Int(ChunkBounds.min.x, ChunkBounds.min.z);
+            Vector2Int maxHex = new Vector2Int(ChunkBounds.max.x, ChunkBounds.max.z);
+            
+            //GridBounds = new Bounds(ChunkBounds.center, ChunkBounds.size);
         }
         public void AddHex(HexTile hex)
         {
@@ -171,7 +204,7 @@ namespace Assets.Scripts.WorldMap
             
             // Essentially, this tells us this
             // for each index, when inserting triangles at a specific index, you must offset the vertex count by the givin variable
-            // and you must offset the insert position using the triStartIndex
+            // and you must offset the insert gridPosition using the triStartIndex
             List<(int vertCount, int triStartIndex)> vertTriIndex = new List<(int, int)>();
             (int totalVerts, int totalTri) totals = (0, 0);
             // the below loop accounts for 90% of the time taken for this method 
@@ -233,8 +266,8 @@ namespace Assets.Scripts.WorldMap
         }
         
         /// <summary>
-        /// Since we combined all of the individual meshes into one, there exist only one collider. THus we need to find the hex that was clicked on base on the position. 
-        /// We do this by getting all the possible grid positions within the vicinity of the mouse click and then we measure between the positions of said grid positions and the mouse click position. The grid position with the smallest distance is the one that was clicked on.
+        /// Since we combined all of the individual meshes into one, there exist only one collider. THus we need to find the hex that was clicked on base on the gridPosition. 
+        /// We do this by getting all the possible grid positions within the vicinity of the mouse click and then we measure between the positions of said grid positions and the mouse click gridPosition. The grid gridPosition with the smallest distance is the one that was clicked on.
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
@@ -248,7 +281,7 @@ namespace Assets.Scripts.WorldMap
 
             if (IsInChunk(gridPos) == false)
             {
-                throw HexNotFoundException;
+                throw new HexException(position, HexException.ErrorType.NotInGrid);
             }
 
             possibleGridCoords.Add(gridPos);
@@ -328,41 +361,31 @@ namespace Assets.Scripts.WorldMap
 
         Dictionary<HexTile, Color> changedColor = new Dictionary<HexTile, Color>();
 
-        public bool IsInChunk(HexTile hex)
-        {
-            if (ChunkBounds.Contains((Vector3Int)hex.GridCoordinates))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
+        // It must be understood that the bounds for chunks has no Y axis, and thus, any bound check against a position must be done with the Y axis set to 0
         public bool IsInChunk(int x, int y)
         {
-            // its wrong for some reason, idk why but you must use bounds
-
-            if (boundsCheck.Contains(new Vector3Int(x, y, 0)))
+            // For some reason BoundsInt.Contains is not working...idk why
+            Bounds chunkBounds = new Bounds(ChunkBounds.center,  ChunkBounds.size);
+            
+            if (chunkBounds.Contains(new Vector3Int(x, 0, y)))
             {
                 return true;
             }
 
             return false;
         }
-        public bool IsInChunk(Vector2Int position)
+        public bool IsInChunk(HexTile hex)
         {
-            // its wrong for some reason, idk why but you must use bounds
-
-            if (boundsCheck.Contains(new Vector3Int(position.x, position.y, 0)))
-            {
-                return true;
-            }
-
-            return false;
+            return IsInChunk(hex.GridCoordinates);
         }
-        public bool IsIntersected(Bounds bounds)
+
+        public bool IsInChunk(Vector2Int gridPosition)
         {
-            if (boundsCheck.Intersects(bounds))
+            return IsInChunk(gridPosition.x, gridPosition.y);
+        }
+        public bool IsInsideBounds(Bounds bounds)
+        {
+            if (bounds.Intersects(WorldBounds))
             {
                 return true;
             }
@@ -600,7 +623,7 @@ namespace Assets.Scripts.WorldMap
 
             Mesh instanceMesh;
             MaterialPropertyBlock instanceBlock;
-            public void DrawInstanced()
+            public void  DrawInstanced()
             {
                 if (data2.Count == 0)
                 {

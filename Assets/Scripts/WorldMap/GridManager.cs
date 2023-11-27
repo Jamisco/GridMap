@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using static Assets.Scripts.WorldMap.HexTile;
-using System.Diagnostics;
 using System;
 using Axial = Assets.Scripts.WorldMap.HexTile.Axial;
 using System.Linq;
@@ -12,6 +11,8 @@ using System.Collections;
 using Assets.Scripts.WorldMap.Biosphere;
 using Unity.VisualScripting;
 using UnityEngine.UIElements;
+using System.Diagnostics;
+using Debug = UnityEngine.Debug;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -29,16 +30,17 @@ namespace Assets.Scripts.WorldMap
             [Tooltip("The Maximum amount of hexes allowed in a chunk. Set this reasonable number because everytime a chunk is modified, the whole thing has to be redrawn. Large chunk will cause significant lag upon modification.")]
             public int MaxHexPerChunk;
 
-            public Vector2Int MapSize;
+            public Vector2Int GridSize;
 
             public HexSettings HexSettings;
             public Material MainMaterial;
             public Material InstanceMaterial;
+            public Material Sprites_Default;
 
 
-            public GridData(Vector2Int mapSize, int maxHexPerChunk, HexSettings hexSettings, Material mainMaterial, Material instanceMaterial)
+            public GridData(Vector2Int mapSize, int maxHexPerChunk, HexSettings hexSettings, Material mainMaterial, Material instanceMaterial, Material sprites_Default)
             {
-                MapSize = mapSize;
+                GridSize = mapSize;
 
                 MaxHexPerChunk = maxHexPerChunk;
 
@@ -46,11 +48,12 @@ namespace Assets.Scripts.WorldMap
 
                 MainMaterial = mainMaterial;
                 InstanceMaterial = instanceMaterial;
+                Sprites_Default = sprites_Default;
             }
 
             public void SetMapSize(Vector2Int size)
             {
-                MapSize = size;
+                GridSize = size;
             }
         }
 
@@ -62,8 +65,41 @@ namespace Assets.Scripts.WorldMap
         private List<HexChunk> hexChunks;
         private Dictionary<Vector2Int, HexTile> HexTiles;
 
-        private Vector2Int MapSize { get { return Data.MapSize; } }
-        private Bounds MapBounds;
+        private Vector2Int GridSize { get { return Data.GridSize; } }
+
+        /// <summary>
+        /// The bounds of the map. Use this to check if a gridPosition is within the map. I recommend you use this with a box collider.
+        /// </summary>
+        public Bounds GridBounds
+        {
+            get
+            {
+                try
+                {
+                    Vector3 min = hexChunks[0].WorldBounds.min;
+                    Vector3 max = hexChunks[hexChunks.Count - 1].WorldBounds.max;
+
+                    return new Bounds((min + max) / 2, max - min);
+                }
+                catch (Exception)
+                {
+
+                    return new Bounds();
+                }
+
+            }
+        }
+
+        public Vector3 GridDimensions 
+        {
+            get
+            {
+                Vector3 min = hexChunks[0].WorldBounds.min;
+                Vector3 max = hexChunks[hexChunks.Count - 1].WorldBounds.max;
+
+                return max - min;
+            }
+        }
 
         public GridData Data { get; private set; }
 
@@ -89,16 +125,18 @@ namespace Assets.Scripts.WorldMap
                 hexChunkPrefab.GetComponent<MeshRenderer>().material = Data.MainMaterial;
             }
         }
-        private void SetBounds()
+        public void GetBoxCollider(ref BoxCollider boxCollider)
         {
-            Vector3 center
-                = HexTile.GetPosition(MapSize.x / 2, 0, MapSize.y / 2, Data.HexSettings);
+            Bounds bounds = GridBounds;
 
-            Vector3 start = GetPosition(Vector3Int.zero, Data.HexSettings);
-            Vector3 end = GetPosition(MapSize.x, 0,
-                MapSize.y, Data.HexSettings);
+            boxCollider.center = bounds.center;
+            boxCollider.size = bounds.size;
+        }
 
-            MapBounds = new Bounds(center, end - start);
+        public bool PositionInGrid(Vector3 worldPosition)
+        {
+            worldPosition.y = 0;
+            return GridBounds.Contains(worldPosition);
         }
 
         #region Hex Generation Methods
@@ -106,7 +144,7 @@ namespace Assets.Scripts.WorldMap
         public void InitializeGrid(GridData gridData, List<HexVisualData> data = null)
         {
             Stopwatch timer = Stopwatch.StartNew();
-            
+
             HexTiles = new Dictionary<Vector2Int, HexTile>();
             hexChunks = new List<HexChunk>();
 
@@ -115,8 +153,7 @@ namespace Assets.Scripts.WorldMap
             CreatePrefabs();
             CreateHexChunks();
 
-            HexTiles = HexTile.CreatesHexes(this, MapSize, ref hexChunks, data);
-            SetBounds();
+            HexTiles = HexTile.CreatesHexes(this, GridSize, ref hexChunks, data);
 
             timer.Stop();
 
@@ -151,16 +188,16 @@ namespace Assets.Scripts.WorldMap
             ChunkSize2Use = (int)Mathf.Sqrt(maxHexCount);
 
             // if the map is small enough such that it can fit in our chunk size, we use the map size instead
-            if (ChunkSize2Use * ChunkSize2Use > MapSize.x * MapSize.y)
+            if (ChunkSize2Use * ChunkSize2Use > GridSize.x * GridSize.y)
             {
                 // Since all chunks will be squares, we use the smaller of the two map sizes
-                ChunkSize2Use = Mathf.Max(MapSize.x, MapSize.y);
+                ChunkSize2Use = Mathf.Max(GridSize.x, GridSize.y);
             }
 
             //ChunkSize2Use -= 1;
 
-            ChunkCount.x = Mathf.CeilToInt((float)MapSize.x / ChunkSize2Use);
-            ChunkCount.y = Mathf.CeilToInt((float)MapSize.y / ChunkSize2Use);
+            ChunkCount.x = Mathf.CeilToInt((float)GridSize.x / ChunkSize2Use);
+            ChunkCount.y = Mathf.CeilToInt((float)GridSize.y / ChunkSize2Use);
         }
         private void CreateHexChunks()
         {
@@ -172,18 +209,24 @@ namespace Assets.Scripts.WorldMap
 
             HexChunk chunk;
 
+            // this is so we dont have to keep creating new structs every time we create a chunk
+            GridData dataCopy = Data;
+
             for (int z = 0; z < ChunkCount.y; z++)
             {
                 for (int x = 0; x < ChunkCount.x; x++)
                 {
-                    bool inX = (x + 1) * ChunkSize2Use <= MapSize.x;
-                    bool inZ = (z + 1) * ChunkSize2Use <= MapSize.y;
+                    bool inX = (x + 1) * ChunkSize2Use <= GridSize.x;
+                    bool inZ = (z + 1) * ChunkSize2Use <= GridSize.y;
 
                     Vector3Int start = new Vector3Int();
                     Vector3Int size = new Vector3Int();
 
                     start.x = x * ChunkSize2Use;
-                    start.y = z * ChunkSize2Use;
+                    start.y = 0;
+                    start.z = z * ChunkSize2Use;
+
+                    size.y = 0;
 
                     if (inX)
                     {
@@ -191,22 +234,22 @@ namespace Assets.Scripts.WorldMap
                     }
                     else
                     {
-                        size.x = MapSize.x - start.x;
+                        size.x = GridSize.x - start.x;
                     }
 
                     if (inZ)
                     {
-                        size.y = ChunkSize2Use;
+                        size.z = ChunkSize2Use;
                     }
                     else
                     {
-                        size.y = MapSize.y - start.y;
+                        size.z = GridSize.y - start.z;
                     }
 
                     BoundsInt bounds = new BoundsInt(start, size);
 
                     chunk = Instantiate(hexChunkPrefab, chunkParent.transform);
-                    chunk.Initialize(this, Data, bounds);
+                    chunk.Initialize(this, ref dataCopy, bounds);
                     hexChunks.Add(chunk);
                 }
             }
@@ -279,6 +322,7 @@ namespace Assets.Scripts.WorldMap
         }
         public void DrawChunkInstanced()
         {
+            SetAllChunksStatus(false);
             // 100 x100 10 fps
             foreach (HexChunk chunk in hexChunks)
             {
@@ -303,27 +347,16 @@ namespace Assets.Scripts.WorldMap
         #region Chunk Status Methods
         public void SetAllChunksStatus(bool status)
         {
-            int childCount = chunkParent.transform.childCount;
-
-            for (int i = childCount - 1; i >= 0; i--)
+            foreach (HexChunk chunk in hexChunks)
             {
-                Transform child = chunkParent.transform.GetChild(i);
-                child.gameObject.SetActive(status);
+                chunk.gameObject.SetActive(status);
             }
-        }
-        public void SetSpecificChunkStatus(HexTile hex, bool status)
-        {
-            hexChunks.First(h => h.IsInChunk(hex)).gameObject.SetActive(status);
-        }
-        public void SetSpecificChunkStatus(HexChunk chunk, bool status)
-        {
-            chunk.gameObject.SetActive(status);
         }
         public void SetChunkStatusIfInBounds(Bounds bounds, bool status)
         {
             foreach (HexChunk chunk in hexChunks)
             {
-                if (chunk.IsIntersected(bounds))
+                if (chunk.IsInsideBounds(bounds))
                 {
                     chunk.gameObject.SetActive(status);
                 }
@@ -333,9 +366,29 @@ namespace Assets.Scripts.WorldMap
         {
             foreach (HexChunk chunk in hexChunks)
             {
-                if (!chunk.IsIntersected(bounds))
+                if (!chunk.IsInsideBounds(bounds))
                 {
                     chunk.gameObject.SetActive(status);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Will set the chunk status to the status passed in if the chunk is inside the bounds, otherwise it will set the chunk status to the opposite of the status if the chunk is not inside the bounds
+        /// </summary>
+        /// <param name="bounds"></param>
+        /// <param name="status"></param>
+        public void SetChunkStatusIfInBoundsOtherwise(Bounds bounds, bool status)
+        {
+            foreach (HexChunk chunk in hexChunks)
+            {
+                if (chunk.IsInsideBounds(bounds))
+                {
+                    chunk.gameObject.SetActive(status);
+                }
+                else
+                {
+                    chunk.gameObject.SetActive(!status);
                 }
             }
         }
@@ -344,12 +397,6 @@ namespace Assets.Scripts.WorldMap
 
         #region Get Hex Data
 
-        /// <summary>
-        /// This is slower because it will loop through all the hexes
-        /// </summary>
-        /// <param name="coordinates"></param>
-        /// <returns></returns>
-        ///     
         private HexTile GetHexTile(Vector2Int position)
         {
             HexTile hex = null;
@@ -360,16 +407,19 @@ namespace Assets.Scripts.WorldMap
                 return hex;
             }
 
-            throw HexNotFoundException;
+            new HexException(position, HexException.ErrorType.NotInGrid).LogMessage();
+
+            return null;
         }
+
         /// <summary>
         /// This is the main function to get a hex tiles. Uses a dictionary, so it is super fast
         /// </summary>
-        /// <param name="position"></param>
+        /// <param name="gridPosition"></param>
         /// <returns></returns>
-        private HexTile GetHexTile(Axial position)
+        private HexTile GetHexTile(Axial gridPosition)
         {
-            Vector2Int vec = Axial.FromAxial(position);
+            Vector2Int vec = Axial.FromAxial(gridPosition);
 
             HexTile hex = null;
             HexTiles.TryGetValue(vec, out hex);
@@ -379,19 +429,56 @@ namespace Assets.Scripts.WorldMap
                 return hex;
             }
 
-            throw HexNotFoundException;
+            new HexException(vec, HexException.ErrorType.NotInGrid).LogMessage();
+
+            return null;
         }
-        private HexChunk GetHexChunk(Vector2Int position)
+        private HexChunk GetHexChunk(Vector2Int gridPosition)
         {
             // formula is ((y - 1) * xc) + x)
-            // y = position.y / chunkSize
+            // y = gridPosition.y / chunkSize
             // xc = number of chunks in a width. Example, if map width is 100, and chunk width is 25, xc = 100/25 = 4
-            // x = position.x  / chunkSize
+            // x = gridPosition.x  / chunkSize
 
             try
             {
-                int x = Mathf.CeilToInt(position.x / ChunkSize2Use);
-                int y = Mathf.CeilToInt(position.y / ChunkSize2Use);
+                int x = Mathf.CeilToInt((float)gridPosition.x / ChunkSize2Use);
+                int y = Mathf.CeilToInt((float)gridPosition.y / ChunkSize2Use);
+
+                int index = (Mathf.Max(0, (y - 1)) * ChunkCount.x) + x;
+
+                index -= 1;
+                index = Math.Clamp(index, 0, ChunkCount.sqrMagnitude);
+                
+                return hexChunks[index];
+            }
+            catch (Exception)
+            {
+                string msg = ($"Chunk Not Found For Hex At Position {gridPosition}");
+
+                Debug.Log(msg);
+            }
+
+            return null;
+        }
+        private HexChunk GetHexChunk(Vector3 localPosition)
+        {
+            // formula is ((z - 1) * xc) + x)
+            // z = gridPosition.z / chunkSize
+            // xc = number of chunks in a width. Example, if map width is 100, and chunk width is 25, xc = 100/25 = 4
+            // x = gridPosition.x  / chunkSize
+
+            string msg = ($"Chunk Not Found For Hex At Position {localPosition}");
+
+            try
+            {
+                if (GridBounds.Contains(localPosition) == false)
+                {
+                    throw new Exception();
+                }
+
+                int x = Mathf.CeilToInt(localPosition.x / ChunkSize2Use);
+                int y = Mathf.CeilToInt(localPosition.z / ChunkSize2Use);
 
                 int index = (Mathf.Max(0, (y - 1)) * ChunkCount.x) + x;
                 HexChunk chunk = hexChunks[index - 1];
@@ -400,18 +487,20 @@ namespace Assets.Scripts.WorldMap
             }
             catch (Exception)
             {
-                throw new Exception("Chunk Not Found Exception");
+                Debug.Log(msg);
             }
+
+            return null;
         }
-        public HexData GetHexData(Vector2Int position)
+        public HexData GetHexData(Vector2Int gridPosition)
         {
             HexTile hex = null;
 
-            HexTiles.TryGetValue(position, out hex);
+            HexTiles.TryGetValue(gridPosition, out hex);
 
             if (hex != null)
             {
-                HexChunk chunk = GetHexChunk(position);
+                HexChunk chunk = GetHexChunk(gridPosition);
 
                 if (chunk != null)
                 {
@@ -419,49 +508,50 @@ namespace Assets.Scripts.WorldMap
                 }
             }
 
+            new HexException(gridPosition, HexException.ErrorType.NotInGrid).LogMessage();
+
             return new HexData();
         }
-        private HexData GetHexDataAtPosition(Vector3 position)
+        public HexData GetHexDataAtPosition(Vector3 worldPosition)
         {
             HexData data;
 
-            Ray ray = Camera.main.ScreenPointToRay(position);
+            Vector3 localPosition = transform.InverseTransformPoint(worldPosition);
 
-            RaycastHit hit;
+            Vector2Int gridPosition = HexTile.GetGridCoordinate(localPosition, HexSettings);
 
-            if (Physics.Raycast(ray, out hit, 1000))
+            HexTile foundHex = GetHexTile(gridPosition);
+
+            if (foundHex == null)
             {
-                HexChunk chunk = hit.collider.GetComponentInParent<HexChunk>();
-
-                if (chunk == null)
-                {
-                    throw HexNotFoundException;
-                }
-
-                // we subtract the position of the chunk because the hexes are positioned relative to the chunk, so if a chunk is at 0,10 and the hex is at 0,0, the hex is actually at 0,10,0 in world position
-
-                HexTile foundHex = chunk.GetClosestHex(hit.point - transform.position);
-
-                data = new HexData(chunk, foundHex);
-
-                return data;
+                new HexException(worldPosition, HexException.ErrorType.NotInGrid).LogMessage();
+                return new HexData();
             }
 
-            throw HexNotFoundException;
-        }
-        private HexData GetHexDataAtMousePosition()
-        {
-            Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            HexChunk chunk = GetHexChunk(gridPosition);
 
-            return GetHexDataAtPosition(mousePosition);
+            if (chunk == null)
+            {
+                string msg = $"Chunk Not Found at World Position {worldPosition}";
+                Debug.Log(msg);
+                return new HexData();
+            }
+
+            data = new HexData(chunk, foundHex);
+
+            return data;
+
+            new HexException(worldPosition, HexException.ErrorType.NotInGrid).LogMessage();
+
+            return new HexData();
         }
         #endregion
 
         #region Set Hex Visual Data
-        public void GetVisualData(Vector2Int position, out HexVisualData data)
+        public HexVisualData GetVisualData(Vector2Int position)
         {
             HexTile hex = GetHexTile(position);
-            data = hex.VisualData;
+            return hex.VisualData;
         }
         public void SetVisualData(Vector2Int position, HexVisualData data)
         {
@@ -480,16 +570,16 @@ namespace Assets.Scripts.WorldMap
         }
 
         /// <summary>
-        /// Note that the order is from position (0, 0) --> mapsize
+        /// Note that the order is from gridPosition (0, 0) --> mapsize
         /// </summary>
         /// <param name="visualData"></param>
         public void SetVisualData(Vector2Int[] positions, HexVisualData[] visualData)
         {
             if (positions.Length != visualData.Length)
             {
-                Exception size = new Exception("Length of positions and visual data must be thesame");
+                string msg = "Length of positions and visual data must be thesame";
 
-                throw size;
+                Debug.Log(msg);
             }
 
             Parallel.For(0, visualData.Length, i =>
@@ -507,105 +597,6 @@ namespace Assets.Scripts.WorldMap
 
         #endregion
 
-
-
-        #region Test Method delete when done
-
-        Dictionary<int, HexData> HighlightedHexes = new Dictionary<int, HexData>();
-        Dictionary<int, HexData> ActivatedBorderHexes = new Dictionary<int, HexData>();
-        private void OnMouseClick()
-        {
-            HexData newData;
-
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                newData = GetHexDataAtMousePosition();
-
-                if (newData.IsNullOrEmpty())
-                {
-                    return;
-                }
-
-                HighlightHex(newData);
-            }
-
-            if (Mouse.current.rightButton.wasPressedThisFrame)
-            {
-                newData = GetHexDataAtMousePosition();
-
-                if (newData.IsNullOrEmpty())
-                {
-                    return;
-                }
-
-                UnHighlightHex(newData);
-            }
-        }
-
-        HexData previousBorder = new HexData();
-        private void HighlightOnHover()
-        {
-            HexData newData = GetHexDataAtMousePosition();
-
-            if (newData.IsNullOrEmpty() || newData == previousBorder)
-            {
-                return;
-            }
-
-            //Debug.Log("Hex at: " + newData.hex.GridCoordinates);
-
-            if (!ActivatedBorderHexes.ContainsKey(newData.Hash))
-            {
-                ActivatedBorderHexes.Remove(previousBorder.Hash);
-
-                if (!previousBorder.IsNullOrEmpty())
-                {
-                    previousBorder.DeactivateBorder();
-                }
-
-                ActivatedBorderHexes.Add(newData.Hash, newData);
-                newData.ActivateBorder();
-                previousBorder = newData;
-            }
-        }
-
-        public void HighlightHex(HexData hex)
-        {
-            if (hex.IsNullOrEmpty())
-            {
-                return;
-            }
-
-            if (!HighlightedHexes.ContainsKey(hex.Hash))
-            {
-                HighlightedHexes.Add(hex.Hash, hex);
-                // hex.Highlight();
-
-
-                hex.ChangeColor(Color.black);
-            }
-        }
-        public void UnHighlightHex(HexData hex)
-        {
-            if (hex.IsNullOrEmpty())
-            {
-                return;
-            }
-
-            if (HighlightedHexes.ContainsKey(hex.Hash))
-            {
-                HighlightedHexes.Remove(hex.Hash);
-                // hex.UnHighlight();
-                //hex.UnHighlight();
-
-                Color ogColor = Color.red;
-
-                hex.ChangeColor(ogColor);
-            }
-        }
-
-        #endregion
-
         /// <summary>
         /// We use this struct to store the data of a hex. This way we dont have to find the chunk. Used for highlighting
         /// </summary>
@@ -614,34 +605,30 @@ namespace Assets.Scripts.WorldMap
         {
             private HexChunk chunk;
             private HexTile hex;
+
+            public Vector2Int GridCoordinates { get { return hex.GridCoordinates;  } }
             public int Hash { get { return GetHashCode(); } }
 
-            static readonly Exception notInChunk = new Exception("Hex is Not In Chunk");
+            static readonly Exception NotInChunk = new Exception("Hex is Not In Chunk");
             private void ThrowIfInvalid(HexChunk chunk, HexTile hex)
             {
                 if (!chunk.IsInChunk(hex))
                 {
-                    throw notInChunk;
+                    throw new HexException(hex.GridCoordinates, HexException.ErrorType.NotInChunk);
                 }
 
                 this.chunk = chunk;
                 this.hex = hex;
             }
-            public HexData(HexChunk chunk, HexTile aHex)
+            public HexData(HexChunk chunk, HexTile hex)
             {
-                if (chunk)
-                    if (!chunk.IsInChunk(aHex))
-                    {
-                        throw notInChunk;
-                    }
+                if (!chunk.IsInChunk(hex))
+                {
+                    throw new HexException(hex.GridCoordinates, HexException.ErrorType.NotInChunk);
+                }
 
                 this.chunk = chunk;
-                this.hex = aHex;
-            }
-
-            public void SetData(HexChunk chunk, HexTile hex)
-            {
-                ThrowIfInvalid(chunk, hex);
+                this.hex = hex;
             }
 
             public void UpdateVisualData()
@@ -661,7 +648,6 @@ namespace Assets.Scripts.WorldMap
                 if (chunk != null && hex != null)
                 {
                     chunk.UnHighlightHex(hex);
-                    ResetData();
                 }
             }
             public void ActivateBorder()
@@ -676,7 +662,6 @@ namespace Assets.Scripts.WorldMap
                 if (!IsNullOrEmpty())
                 {
                     chunk.DeactivateHexBorder(hex);
-                    ResetData();
                 }
             }
             public void Remove()
@@ -684,7 +669,6 @@ namespace Assets.Scripts.WorldMap
                 if (chunk != null && hex != null)
                 {
                     chunk.RemoveHex(hex);
-                    ResetData();
                 }
             }
 

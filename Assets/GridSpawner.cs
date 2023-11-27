@@ -1,20 +1,25 @@
+using Assets.Scripts.Miscellaneous;
 using Assets.Scripts.WorldMap;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using static Assets.Scripts.WorldMap.Biosphere.SurfaceBody;
 using static Assets.Scripts.WorldMap.GridManager;
 using static Assets.Scripts.WorldMap.HexTile;
 using static Assets.Scripts.WorldMap.HexTile.HexVisualData;
 using static UnityEngine.GraphicsBuffer;
 
+[RequireComponent(typeof(GridManager))]
+[RequireComponent(typeof(BoxCollider))]
 public class GridSpawner : MonoBehaviour
 {
-    // Start is called before the first frame update
     public GridManager manager;
     public PlanetGenerator planet;
     public GridData gridData;
+
+    public BoxCollider boxCollider;
 
     Vector2Int mapSize;
 
@@ -28,24 +33,40 @@ public class GridSpawner : MonoBehaviour
         Begin();
     }
 
+    private void Update()
+    {
+        OnMouseClick();
+        //UpdateBounds();
+        //HighlightOnHover();
+        DisableUnseenChunks();
+    }
+
+    void UpdateBounds()
+    {
+        manager.GetBoxCollider(ref boxCollider);
+        UpdateBounds();
+    }
+
     void Begin()
     {
         manager = GetComponent<GridManager>();
         planet = GetComponent<PlanetGenerator>();
+        boxCollider = GetComponent<BoxCollider>();
 
         List<HexVisualData> visualData;
 
-        mapSize = gridData.MapSize;
+        mapSize = gridData.GridSize;
         
-        planet.MainPlanet.PlanetSize = gridData.MapSize;
+        planet.MainPlanet.PlanetSize = gridData.GridSize;
         planet.GenerateData();
 
         visualData = ConvertToHexVisual(planet.GetAllBiomes());
 
         manager.InitializeGrid(gridData, visualData);
-        
-        manager.GenerateGrid();
 
+       // manager.GetBoxCollider(ref boxCollider);
+
+        manager.GenerateGrid();
         //SetHexVisualData();
 
     }
@@ -101,15 +122,123 @@ public class GridSpawner : MonoBehaviour
     }
 
 
-
-    // Update is called once per frame
-    void Update()
+    Dictionary<int, HexData> HighlightedHexes = new Dictionary<int, HexData>();
+    Dictionary<int, HexData> ActivatedBorderHexes = new Dictionary<int, HexData>();
+    private void OnMouseClick()
     {
-        //if(Time.timeSinceLevelLoad > 5)
-        //{
-        //    manager.DrawChunkInstanced();
-        //}
+        HexData newData;
+        Vector3 mousePos;
+
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            mousePos = GetMousePosition();
+
+            if (!manager.PositionInGrid(mousePos))
+            {
+                return;
+            }
+            
+            newData = 
+                manager.GetHexDataAtPosition(mousePos);
+
+            if (newData.IsNullOrEmpty())
+            {
+                return;
+            }
+
+            newData.Highlight();
+        }
+
+        if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            mousePos = GetMousePosition();
+            
+            newData =
+               manager.GetHexDataAtPosition(mousePos);
+
+            if (!newData.IsNullOrEmpty())
+            {
+                newData.UnHighlight();
+            }
+        }
     }
+
+    HexData previousData = new HexData();
+    private void HighlightOnHover()
+    {
+        Vector3 mousePos = GetMousePosition();
+
+        if (!manager.PositionInGrid(mousePos))
+        {
+            return;
+        }
+
+        // hextile.GetGridCoordinate() is not accurate
+        HexData newData = manager.GetHexDataAtPosition(mousePos);
+
+        if (newData.IsNullOrEmpty() || newData == previousData)
+        {
+            return;
+        }
+
+        previousData.DeactivateBorder();
+
+        newData.ActivateBorder();
+        previousData = newData;
+        
+        //Debug.Log("Hovering Over Hex: " + newData.GridCoordinates.ToString());
+    }
+
+    private void DisableUnseenChunks()
+    {
+        Bounds bounds = Camera.main.OrthographicBounds3D();
+
+        manager.SetChunkStatusIfInBoundsOtherwise(bounds, true);
+    }
+    public void HighlightHex(HexData hex)
+    {
+        if (hex.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        if (!HighlightedHexes.ContainsKey(hex.Hash))
+        {
+            HighlightedHexes.Add(hex.Hash, hex);
+            // hex.Highlight();
+
+
+            hex.ChangeColor(Color.black);
+        }
+    }
+    public void UnHighlightHex(HexData hex)
+    {
+        if (hex.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        if (HighlightedHexes.ContainsKey(hex.Hash))
+        {
+            HighlightedHexes.Remove(hex.Hash);
+            // hex.UnHighlight();
+            //hex.UnHighlight();
+
+            Color ogColor = Color.red;
+
+            hex.ChangeColor(ogColor);
+        }
+    }
+
+    private Vector3 GetMousePosition()
+    {
+        Vector3 mousePos = Mouse.current.position.ReadValue();
+
+        mousePos = Camera.main.ScreenToWorldPoint(mousePos);
+
+        return mousePos;
+    }
+
 
 #if UNITY_EDITOR
     [CustomEditor(typeof(GridSpawner))]

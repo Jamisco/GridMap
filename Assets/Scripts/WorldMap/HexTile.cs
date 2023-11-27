@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
+using UnityEditor.PackageManager;
 using UnityEngine;
-
+using static Assets.Scripts.WorldMap.GridManager;
 using Random = System.Random;
 
 namespace Assets.Scripts.WorldMap
@@ -235,6 +237,11 @@ namespace Assets.Scripts.WorldMap
             return position;
         }
 
+        public static Vector3 GetPosition(Vector2Int pos, HexSettings hexSettings)
+        {
+            return GetPosition(pos.x, 0, pos.y, hexSettings);
+        }
+
         public static Vector3 GetPosition(Vector3Int pos, HexSettings hexSettings)
         {
             return GetPosition(pos.x, pos.y, pos.z, hexSettings);
@@ -246,73 +253,92 @@ namespace Assets.Scripts.WorldMap
         }
 
         /// <summary>
+        /// This will give you the min and max positions of the hexes in the given area aswell as the dimensions(width and height) of the area
+        /// </summary>
+        /// <param name="minPos"></param>
+        /// <param name="maxPos"></param>
+        /// <param name="hexSettings"></param>
+        /// <returns></returns>
+        public static (Vector3 min, Vector3 max, Vector3 dimensions) 
+            GetVectorBounds(Vector2Int minPos, Vector2Int maxPos, HexSettings hexSettings)
+        {
+            HexTile minHex = new HexTile(minPos.x, minPos.y, hexSettings);
+            HexTile maxHex = new HexTile(maxPos.x, maxPos.y, hexSettings);
+
+            float minX = minHex.GetWorldVertexPosition(4).x;
+            float minY = minHex.GetWorldVertexPosition(3).z;
+
+            Vector3 min = new Vector3(minX, 0, minY);
+
+            float maxX = maxHex.GetWorldVertexPosition(1).x;
+            float maxY = maxHex.GetWorldVertexPosition(0).z;
+
+            Vector3 max = new Vector3(maxX, 0, maxY);
+
+            return (min, max, max - min);
+        }
+
+        public static Vector3 GetDimensions(Vector2Int minPos, Vector2Int maxPos, HexSettings hexSettings)
+        {
+            return GetVectorBounds(minPos, maxPos, hexSettings).dimensions;
+        }
+        /// <summary>
         /// Be aware that this function might not be accurate in some rare occasions. Due to the nature of the hex grid, there are some cases where the function will return the wrong value because of tiny discrepancies in distances. Thus it is recommended to also get the surrounding tiles and check if the tile is actually the closest one.
         /// </summary>
-        /// <param name="worldPosition"></param>
+        /// <param name="localPosition"></param>
         /// <returns></returns>
-        public static Vector2Int GetGridCoordinate(Vector3 worldPosition, HexSettings hexSettings)
+        public static Vector2Int GetGridCoordinate(Vector3 localPosition, HexSettings hexSettings)
         {
+            ExtensionMethods.ClearLog();
+            
             Vector3Int gridCoordinate = Vector3Int.zero;
 
-            float z = worldPosition.z / (hexSettings.outerRadius * 1.5f);
+            localPosition.y = 0;
 
-            int minZ = Mathf.FloorToInt(z);
-            int maxZ = Mathf.CeilToInt(z);
+            float x = localPosition.x / (hexSettings.innerRadius * 2f);
+            float z = localPosition.z / (hexSettings.outerRadius * 1.5f);
 
-            int clozerZ = CloserZ();
+            int x1 = Mathf.CeilToInt(x);
+            int z1 = Mathf.CeilToInt(z);
 
-            float x = worldPosition.x / (hexSettings.innerRadius * 2f);
+            return GetClosestGrid(x1, z1);
 
-            int minX = Mathf.FloorToInt(x);
-            int maxX = Mathf.CeilToInt(x);
-
-            int clozerX = CloserX();
-
-            return new Vector2Int(clozerX, clozerZ);
-
-            // we get the position of the 2 possible coordinates, then we compare the distance between the world position and the 2 coordinates
-            // the one with the smallest distance is the closest coordinate to the world position
-            int CloserZ()
+            Vector2Int GetClosestGrid(int maxX, int maxZ)
             {
-                float position = worldPosition.z;
-                float val1Pos = GetPositionZ(minZ, hexSettings);
-                float val2Pos = GetPositionZ(maxZ, hexSettings);
+                Vector2Int closest = Vector2Int.zero;
+                float prevDistance = hexSettings.outerRadius * 2;
+                float distance = -1;
 
-                float val1Distance = Mathf.Abs(val1Pos - position);
-                float val2Distance = Mathf.Abs(val2Pos - position);
+                int count = 2;
 
-                if (val1Distance < val2Distance)
+                int xMin = Mathf.Max(0, maxX - count);
+                int zMin = Mathf.Max(0, maxZ - count);
+
+                for (int x = maxX; x >= xMin; x--)
                 {
-                    return minZ;
-                }
-                else
-                {
-                    return maxZ;
-                }
-            }
+                    for (int z = maxZ; z >= zMin; z--)
+                    {
+                        Vector3 pos = GetPosition(x, 0, z, hexSettings);
+                        distance = Vector3.Distance(pos, localPosition);
 
-            // we get the position of the 2 possible coordinates, then we compare the distance between the world position and the 2 coordinates
-            // the one with the smallest distance is the closest coordinate to the world position
-            // Since X position is dependent on Z position, we need to get the closest Z position first
-            int CloserX()
-            {
-                float position = worldPosition.x;
-                float val1Pos = GetPosition(minX, 0, clozerZ, hexSettings).x;
-                float val2Pos = GetPosition(maxX, 0, clozerZ, hexSettings).x;
-
-                float val1Distance = Mathf.Abs(val1Pos - position);
-                float val2Distance = Mathf.Abs(val2Pos - position);
-
-                if (val1Distance < val2Distance)
-                {
-                    return minX;
+                        // if the point is inside the hex, then the distance from the      center of the hex to the point should be less than the         outer radius
+                        if (distance <= hexSettings.outerRadius)
+                        {
+                            if(distance < prevDistance)
+                            {
+                                prevDistance = distance;
+                                closest = new Vector2Int(x, z);
+                            }
+                        }
+                    }
                 }
-                else
-                {
-                    return maxX;
-                }
+
+                // this should never run
+                return closest;
             }
         }
+
+
         /// <summary>
         /// Creates the four triangles that fill up a hexagon.
         /// Used for mesh creation
@@ -349,8 +375,6 @@ namespace Assets.Scripts.WorldMap
         List<Vector2> SlopeUV = new List<Vector2>(28);
         List<int> SlopeTriangles = new List<int>(6);
         Vector2[] BaseUV;
-
-        public static readonly Exception HexNotFoundException = new Exception("Hex Not Found");
 
         public HexVisualData VisualData { get; set; }
 
@@ -445,8 +469,8 @@ namespace Assets.Scripts.WorldMap
                 HexChunk chunk = hexChunks[chunkIndex];
                 int chunkBoundsXMin = chunk.ChunkBounds.xMin;
                 int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-                int chunkBoundsYMin = chunk.ChunkBounds.yMin;
-                int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+                int chunkBoundsYMin = chunk.ChunkBounds.zMin;
+                int chunkBoundsYMax = chunk.ChunkBounds.zMax;
 
                 for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
                 {
@@ -471,6 +495,26 @@ namespace Assets.Scripts.WorldMap
             }
 
             return hexTiles;
+        }
+
+        /// <summary>
+        /// This private constructor should only be used to measure the bounds of the hex. DO NOT USE IT FOR ANYTHING ELSE
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="z"></param>
+        /// <param name="hexSettings"></param>
+        private HexTile(int x, int z, HexSettings hexSettings)
+        {
+            AxialCoordinates = Axial.ToAxial(x, z);
+            GridCoordinates = new Vector2Int(x, z);
+
+            this.hexSettings = hexSettings;
+
+            Position = GetPosition(x, 0, z, hexSettings);
+
+            CreateBaseMesh();
+
+            SetBounds();
         }
 
         public HexTile(int x, int z, GridManager grid)
@@ -883,6 +927,72 @@ namespace Assets.Scripts.WorldMap
                 return false;
             }
 
+        }
+
+        public class HexException : Exception
+        {
+            public enum ErrorType { NotInGrid, NotInChunk}
+
+            private ErrorType errorType;
+
+            public Vector2Int GridPosition { get; private set; }
+
+            public Vector2 WorldPosition { get; private set; }
+
+            public HexException(Vector2Int gridPosition, ErrorType error) :
+                                base(GetMessage(gridPosition.ToString(), false, error))
+            {
+                errorType = error;
+                GridPosition = gridPosition;
+
+                WorldPosition = Vector2.one * -1;
+            }
+
+            public HexException(Vector2 worldPosition, ErrorType error) : 
+                                base(GetMessage(worldPosition.ToString(), true,  error))
+            {
+                errorType = error;
+                WorldPosition = worldPosition;
+
+                GridPosition = Vector2Int.one * -1;
+            }
+
+            public void LogMessage()
+            {
+                Debug.LogError(Message);
+            }
+
+            private static string GetMessage(string position, bool isWorldPos, ErrorType error)
+            {
+                string GridOrChunk = "";
+                string WorldOrGrid = "";
+
+                switch (error)
+                {
+                    case ErrorType.NotInGrid:
+                        GridOrChunk = "Grid";
+                        break;
+                    case ErrorType.NotInChunk:
+                        GridOrChunk = "Chunk";
+                        break;
+                    default:
+                        GridOrChunk = "Grid";
+                        break;
+                }
+
+                if (isWorldPos)
+                {
+                    WorldOrGrid = "World";
+                }
+                else
+                {
+                    WorldOrGrid = "Grid";
+                }
+
+                string message = $"Hex at {WorldOrGrid} Position ({position}) Not Found In {GridOrChunk}";
+
+                return message;
+            }
         }
 
     }
