@@ -33,7 +33,7 @@ namespace Assets.Scripts.WorldMap
 
         private List<HexTile> hexes;
 
-        private ConcurrentDictionary<Vector2Int, HexTile> hexDictionary = new ConcurrentDictionary<Vector2Int, HexTile>();
+        private Dictionary<Vector2Int, HexTile> hexDictionary = new Dictionary<Vector2Int, HexTile>();
 
         private Dictionary<HexVisualData, List<HexTile>> biomeTiles = new Dictionary<HexVisualData, List<HexTile>>();
 
@@ -119,7 +119,8 @@ namespace Assets.Scripts.WorldMap
                // HighlightMeshFilter.mesh.MarkDynamic();
             }
         }
-        public void Initialize(GridManager grid, ref GridData gridData, BoundsInt aBounds)
+        public void Initialize(GridManager grid, ref GridData gridData, 
+            BoundsInt gridBounds)
         {
             CreateLayerObjects();
             
@@ -134,23 +135,17 @@ namespace Assets.Scripts.WorldMap
             BorderLayer.GetComponent<MeshRenderer>().material = gridData.Sprites_Default;
             HighlightLayer.GetComponent<MeshRenderer>().material = gridData.Sprites_Default;
 
-
             meshRenderer = GetComponent<MeshRenderer>();
 
             MainGrid = grid;
 
-            ChunkBounds = aBounds;
-            ChunkBounds.ClampToBounds(aBounds);
+            ChunkBounds = gridBounds;
+            ChunkBounds.ClampToBounds(gridBounds);
 
-            hexes = new List<HexTile>(aBounds.size.x * aBounds.size.y);
+            hexes = new List<HexTile>(gridBounds.size.x * gridBounds.size.y);
 
             HighlightedHexes = new FusedMesh();
             ActiveHexBorders = new FusedMesh();
-
-            Vector2Int minHex = new Vector2Int(ChunkBounds.min.x, ChunkBounds.min.z);
-            Vector2Int maxHex = new Vector2Int(ChunkBounds.max.x, ChunkBounds.max.z);
-            
-            //GridBounds = new Bounds(ChunkBounds.center, ChunkBounds.size);
         }
         public void AddHex(HexTile hex)
         {
@@ -337,7 +332,7 @@ namespace Assets.Scripts.WorldMap
 
         private void RemoveHexFromLists(HexTile hex)
         {
-            hexDictionary.TryRemove(hex.GridCoordinates, out HexTile hexTile);
+            hexDictionary.Remove(hex.GridCoordinates, out HexTile hexTile);
 
             HexVisualData props = hex.VisualData;
 

@@ -226,6 +226,7 @@ namespace Assets.Scripts.WorldMap
         /// <param name="x"></param>
         /// <param name="z"></param>
         /// <returns></returns>
+        /// 
         public static Vector3 GetPosition(int x, float y, int z, HexSettings hexSettings)
         {
             Vector3 position;
@@ -364,9 +365,22 @@ namespace Assets.Scripts.WorldMap
             vertexIndex % 6, vertexIndex == 11 ? 6 : vertexIndex + 1, (vertexIndex + 1) % 6
         };
 
-        public Axial AxialCoordinates;
+        private Axial _axeCoord = new Axial(-1, -1, -1);
+        public Axial AxialCoordinates
+        {
+            get
+            {
+                if (_axeCoord.X == -1)
+                {
+                    _axeCoord = Axial.ToAxial(X, Y);
+                }
+
+                return _axeCoord;
+            }
+        }
+        
         public Vector2Int GridCoordinates;
-        public Vector3 Position { get; set; }
+        public Vector3 Position { get; private set; }
 
         public List<Vector3> Vertices = new List<Vector3>(6);
         public List<int> Triangles = new List<int>(12);
@@ -376,7 +390,7 @@ namespace Assets.Scripts.WorldMap
         List<int> SlopeTriangles = new List<int>(6);
         Vector2[] BaseUV;
 
-        public HexVisualData VisualData { get; set; }
+        public HexVisualData VisualData { get; set; } = new HexVisualData(Color.white);
 
         /// <summary>
         /// Quick access to the X coordinates of the tile
@@ -401,7 +415,7 @@ namespace Assets.Scripts.WorldMap
         //    });
 
         //}
-        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, ref List<HexChunk> hexChunks, List<HexVisualData> data = null)
+        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, ref List<HexChunk> hexChunks)
         {
             // we define the size of the dictionary to avoid resizing it, which slows things down
             Dictionary<Vector2Int, HexTile> hexTiles = new Dictionary<Vector2Int, HexTile>(MapSize.x * MapSize.y + 10);
@@ -464,6 +478,8 @@ namespace Assets.Scripts.WorldMap
             // For loop: 7 seconds
             // Parrellel foreach/for 15 - 16 seconds
 
+            HexSettings settings = grid.HexSettings;
+
             for (int chunkIndex = 0; chunkIndex < hexChunks.Count; chunkIndex++)
             {
                 HexChunk chunk = hexChunks[chunkIndex];
@@ -476,18 +492,9 @@ namespace Assets.Scripts.WorldMap
                 {
                     for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
                     {
-                        HexTile hc = new HexTile(x, z, grid);
+                        HexTile hc = new HexTile(x, z, settings);
 
                         hexTiles[hc.GridCoordinates] = hc;
-
-                        if(data != null)
-                        {
-                            // based on the grid position of the hex, we can calculate the index of the hex in the data list... assuming it is in order of (0, 0) (0, 1) (0, 2) ... (mapSize.x, mapSize.y)
-
-                            int index = (z * MapSize.x) + x;
-                            
-                            hc.VisualData = data.ElementAtOrDefault(index);
-                        }
 
                         chunk.AddHex(hc);
                     }
@@ -497,15 +504,99 @@ namespace Assets.Scripts.WorldMap
             return hexTiles;
         }
 
-        /// <summary>
-        /// This private constructor should only be used to measure the bounds of the hex. DO NOT USE IT FOR ANYTHING ELSE
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="z"></param>
-        /// <param name="hexSettings"></param>
-        private HexTile(int x, int z, HexSettings hexSettings)
+        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, ref List<HexChunk> hexChunks, List<HexVisualData> data)
         {
-            AxialCoordinates = Axial.ToAxial(x, z);
+            // we define the size of the dictionary to avoid resizing it, which slows things down
+            Dictionary<Vector2Int, HexTile> hexTiles = new Dictionary<Vector2Int, HexTile>(MapSize.x * MapSize.y + 10);
+
+            HexSettings hexSettings = grid.HexSettings;
+
+            #region Parrallel forEach
+            //Parallel.ForEach(hexChunks, chunk =>
+            //{
+            //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
+            //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
+            //    int chunkBoundsYMin = chunk.ChunkBounds.yMin;
+            //    int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+
+            //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
+            //    {
+            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        {
+            //            HexTile hc = new HexTile(x, z);
+
+            //            hexTiles[hc.AxialCoordinates] = hc;
+
+            //            chunk.AddHex(hc);
+            //        }
+            //    }
+            //});
+
+            #endregion
+
+            #region Parrellel For
+
+            //List<HexChunk> chunky = hexChunks;
+
+            //Parallel.For(0, hexChunks.Count, chunkIndex =>
+            //{
+            //    HexChunk chunk = chunky[chunkIndex];
+
+            //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
+            //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
+            //    int chunkBoundsYMin = chunk.ChunkBounds.zMin;
+            //    int chunkBoundsYMax = chunk.ChunkBounds.zMax;
+
+            //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
+            //    {
+            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        {
+            //            HexTile hc = new HexTile(x, z, hexSettings);
+
+            //            hexTiles[hc.GridCoordinates] = hc;
+
+            //            chunk.AddHex(hc);
+            //        }
+            //    }
+            //});
+
+            #endregion
+
+            // It seems using a standard loop is about 30% - 50% faster than using parrallel.
+            // For a 1000 x 1000 grid
+            // For loop: 7 seconds
+            // Parrellel foreach/for 15 - 16 seconds
+            HexTile hc;
+            for (int chunkIndex = 0; chunkIndex < hexChunks.Count; chunkIndex++)
+            {
+                HexChunk chunk = hexChunks[chunkIndex];
+                int chunkBoundsXMin = chunk.ChunkBounds.xMin;
+                int chunkBoundsXMax = chunk.ChunkBounds.xMax;
+                int chunkBoundsYMin = chunk.ChunkBounds.zMin;
+                int chunkBoundsYMax = chunk.ChunkBounds.zMax;
+
+                for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
+                {
+                    for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+                    {
+                        hc = new HexTile(x, z, hexSettings);
+
+                        hexTiles.Add(hc.GridCoordinates, hc);
+
+                        int index = (z * MapSize.x) + x;
+
+                        hc.VisualData = data.ElementAtOrDefault(index);
+
+                        chunk.AddHex(hc);
+                    }
+                }
+            }
+
+            return hexTiles;
+        }
+
+        public HexTile(int x, int z, HexSettings hexSettings)
+        {
             GridCoordinates = new Vector2Int(x, z);
 
             this.hexSettings = hexSettings;
@@ -513,31 +604,6 @@ namespace Assets.Scripts.WorldMap
             Position = GetPosition(x, 0, z, hexSettings);
 
             CreateBaseMesh();
-
-            SetBounds();
-        }
-
-        public HexTile(int x, int z, GridManager grid)
-        {
-            AxialCoordinates = Axial.ToAxial(x, z);
-            GridCoordinates = new Vector2Int(x, z);
-
-            hexSettings = grid.HexSettings;
-
-            float y = random.NextFloat(0, hexSettings.maxHeight);
-
-            Position = GetPosition(x, y, z, hexSettings);
-
-            Grid = grid;
-
-            // hexes will be created with a default color of white
-            VisualData = new HexVisualData(Color.white);
-
-            CreateBaseMesh();
-            
-            SetBounds();
-
-            hexSettings = Grid.HexSettings;
         }
         public void CreateBaseMesh()
         {
@@ -743,40 +809,6 @@ namespace Assets.Scripts.WorldMap
         {
             return CombineVertices().Count;
         }
-
-        double minx = 0;
-        double maxx = 0;
-        double miny = 0;
-        double maxy = 0;
-        private void SetBounds()
-        {
-            minx = Vertices[5].x;
-            maxx = Vertices[2].x;
-            miny = Vertices[0].y;
-            maxy = Vertices[3].y;
-        }
-        public bool IsPointInPolygon(Vector3 p)
-        {
-            if (p.x < minx || p.x > maxx || p.y < miny || p.y > maxy)
-            {
-                return false;
-            }
-
-            // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
-            
-            bool inside = false;
-            for (int i = 0, j = Vertices.Count - 1; i < Vertices.Count; j = i++)
-            {
-                if ((Vertices[i].y > p.y) != (Vertices[j].y > p.y) &&
-                     p.x < (Vertices[j].x - Vertices[i].x) * (p.y - Vertices[i].y) / (Vertices[j].y - Vertices[i].y) + Vertices[i].x)
-                {
-                    inside = !inside;
-                }
-            }
-
-            return inside;
-        }
-
         public override int GetHashCode()
         {
             return HashCode.Combine(GridCoordinates, AxialCoordinates, Position, mesh);

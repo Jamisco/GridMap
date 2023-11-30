@@ -36,39 +36,22 @@ public class GridSpawner : MonoBehaviour
     private void Update()
     {
         OnMouseClick();
-        //UpdateBounds();
-        //HighlightOnHover();
-        DisableUnseenChunks();
-    }
-
-    void UpdateBounds()
-    {
-        manager.GetBoxCollider(ref boxCollider);
-        UpdateBounds();
     }
 
     void Begin()
     {
         manager = GetComponent<GridManager>();
         planet = GetComponent<PlanetGenerator>();
-        boxCollider = GetComponent<BoxCollider>();
-
+        
         List<HexVisualData> visualData;
 
-        mapSize = gridData.GridSize;
-        
         planet.MainPlanet.PlanetSize = gridData.GridSize;
         planet.GenerateData();
-
+        
+        mapSize = gridData.GridSize;  
         visualData = ConvertToHexVisual(planet.GetAllBiomes());
-
         manager.InitializeGrid(gridData, visualData);
-
-       // manager.GetBoxCollider(ref boxCollider);
-
         manager.GenerateGrid();
-        //SetHexVisualData();
-
     }
 
     void SetHexVisualData()
@@ -107,7 +90,7 @@ public class GridSpawner : MonoBehaviour
     private HexVisualData ConvertToHexVisual(BiomeData data)
     {
         HexVisualData hData = new HexVisualData(data.BiomeColor,
-                              data.WeatherTexture, null, 0f);
+                              data.SeasonTexture, null, 0f);
         
         if (useColor)
         {
@@ -160,6 +143,8 @@ public class GridSpawner : MonoBehaviour
             {
                 newData.UnHighlight();
             }
+
+            // check if hex exists before highligthing, actibing border et
         }
     }
 

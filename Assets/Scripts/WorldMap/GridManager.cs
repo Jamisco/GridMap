@@ -200,9 +200,7 @@ namespace Assets.Scripts.WorldMap
             ChunkCount.y = Mathf.CeilToInt((float)GridSize.y / ChunkSize2Use);
         }
         private void CreateHexChunks()
-        {
-            hexChunks.Clear();
-
+        {          
             DestroyHexChunks();
 
             CalculateChunkSizes();
@@ -331,6 +329,8 @@ namespace Assets.Scripts.WorldMap
         }
         private void DestroyHexChunks()
         {
+            hexChunks.Clear();
+            
             int childCount = chunkParent.transform.childCount;
 
             for (int i = childCount - 1; i > 0; i--)
