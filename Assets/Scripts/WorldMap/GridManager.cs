@@ -35,7 +35,7 @@ namespace Assets.Scripts.WorldMap
             public HexSettings HexSettings;
             public Material MainMaterial;
             public Material InstanceMaterial;
-            public Material Sprites_Default;
+            public Material HighlightShader;
 
 
             public GridData(Vector2Int mapSize, int maxHexPerChunk, HexSettings hexSettings, Material mainMaterial, Material instanceMaterial, Material sprites_Default)
@@ -48,7 +48,7 @@ namespace Assets.Scripts.WorldMap
 
                 MainMaterial = mainMaterial;
                 InstanceMaterial = instanceMaterial;
-                Sprites_Default = sprites_Default;
+                HighlightShader = sprites_Default;
             }
 
             public void SetMapSize(Vector2Int size)
@@ -636,11 +636,11 @@ namespace Assets.Scripts.WorldMap
                 chunk.UpdateVisualData(hex);
             }
 
-            public void Highlight()
+            public void Highlight(Color color)
             {
                 if (chunk != null && hex != null)
                 {
-                    chunk.HighlightHex(hex);
+                    chunk.HighlightHex(hex, color);
                 }
             }
             public void UnHighlight()
@@ -650,11 +650,11 @@ namespace Assets.Scripts.WorldMap
                     chunk.UnHighlightHex(hex);
                 }
             }
-            public void ActivateBorder()
+            public void ActivateBorder(Color color)
             {
                 if (!IsNullOrEmpty())
                 {
-                    chunk.ActivateHexBorder(hex);
+                    chunk.ActivateHexBorder(hex, color);
                 }
             }
             public void DeactivateBorder()

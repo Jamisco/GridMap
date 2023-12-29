@@ -21,6 +21,8 @@ namespace Assets.Scripts.Miscellaneous
         /// <param name="componentName"></param>
         /// <returns></returns>
         /// 
+
+#if UNITY_EDITOR
         public static void ClearLog()
         {
             var assembly = Assembly.GetAssembly(typeof(UnityEditor.Editor));
@@ -28,6 +30,8 @@ namespace Assets.Scripts.Miscellaneous
             var method = type.GetMethod("Clear");
             method.Invoke(new object(), null);
         }
+
+#endif
         public static Bounds OrthographicBounds3D(this Camera camera)
         {
             float screenAspect = camera.aspect;
@@ -194,5 +198,18 @@ namespace Assets.Scripts.Miscellaneous
             mesh.RecalculateTangents();
             return mesh;
         }
+        
+        public static void SetFullColor(this Mesh mesh, Color color)
+        {
+            List<Color> colors = new List<Color>();
+            
+            for (int i = 0; i < mesh.vertexCount; i++)
+            {
+                colors.Add(color);
+            }
+
+            mesh.colors = colors.ToArray();
+        }
+
     }
 }

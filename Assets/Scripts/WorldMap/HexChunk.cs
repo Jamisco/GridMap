@@ -132,8 +132,10 @@ namespace Assets.Scripts.WorldMap
             renderParams = new RenderParams(MainMaterial);
             instanceParam = new RenderParams(InstanceMaterial);
 
-            BorderLayer.GetComponent<MeshRenderer>().material = gridData.Sprites_Default;
-            HighlightLayer.GetComponent<MeshRenderer>().material = gridData.Sprites_Default;
+            BorderLayer.GetComponent<MeshRenderer>().material = gridData.HighlightShader;
+
+            // find a way to change highlight color per hex
+            HighlightLayer.GetComponent<MeshRenderer>().material = gridData.HighlightShader;
 
             meshRenderer = GetComponent<MeshRenderer>();
 
@@ -442,9 +444,13 @@ namespace Assets.Scripts.WorldMap
             // draw the change
             DrawMesh();
         }
-        public void HighlightHex(HexTile hex)
+        public void HighlightHex(HexTile hex, Color color)
         {
-            HighlightedHexes.AddMesh(hexSettings.GetInnerHighlighter(),
+            Mesh hMesh = hexSettings.GetInnerHighlighter();
+
+            hMesh.SetFullColor(color);
+
+            HighlightedHexes.AddMesh(hMesh,
                 hex.GetHashCode(), hex.Position);
 
             HighlightMeshFilter.mesh = HighlightedHexes.Mesh;
@@ -458,11 +464,15 @@ namespace Assets.Scripts.WorldMap
                 HighlightMeshFilter.mesh = HighlightedHexes.Mesh;
             }
         }
-        public void ActivateHexBorder(HexTile hex)
+        public void ActivateHexBorder(HexTile hex, Color color)
         {
             int[] sides = { 0, 1, 2, 3, 4, 5 };
 
-            ActiveHexBorders.AddMesh(hexSettings.GetOuterHighlighter(sides),
+            Mesh hMesh = hexSettings.GetOuterHighlighter(sides);
+
+            hMesh.SetFullColor(color);
+
+            ActiveHexBorders.AddMesh(hMesh,
                                      hex.GetHashCode(), hex.Position);
 
             BorderMeshFilter.mesh = ActiveHexBorders.Mesh;

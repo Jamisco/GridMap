@@ -1,0 +1,20 @@
+﻿- We are unable to make this map 3d because of us using only a limit amount of vertices. We can not create hills/mountains nor can we use tools such as tesselation
+
+- We should give the user the option to highlight only specific sides of the hex.
+- Raising errors/Exception in functions is not a good idea and just clogs up the console.
+	- It should be up to the caller of each method to determine what value he finds suitable. Additionally, it will be best if the method had a default value to return if no value is found.
+
+- We want to be able to change the dimensions of the hex. While the default shape looks fine. We want to give the user more options or flexibility to create their own hex shape.
+- The user should have the option to spawnonly chunks only within certain bounds
+- There should be a means to disable chunks and increase performance. It seems disabling them straight up doesnt work.
+- We should be able to spawn objects on the hexes. This will be useful for spawning trees, rocks, etc.
+- There must exist a means to layer materials on top of each other. This will be useful for creating roads, rivers, etc.
+	- might be best to make rivers, and extra objects their own chunks and then layer them on top of the hexes. This way we can have more control over the shape of the river and disable objects if need be.
+- We should be able able to make the map use hexes or squares/squares. This will be useful for creating a grid based game.
+- we need proper lighting. Hills should create shadows etc
+	- although much of the lighting might be up to the user.
+- Being able to highlight using different colors is currently not possible because we are using one highlight mesh and material per chunk. 
+	- This can be overcomed by creating a highlight mesh and material per hex. This will be more expensive but will allow us to have more control over the highlighting.
+	- Never mind, this can be fixed by using a shader to highlight. We can either pass in a property inthe shader(not recommended)https://discussions.unity.com/t/change-mesh-color-with-shader-or-mesh-colors/115318/2?clickref=1100ly5mhPwx&utm_source=partnerize&utm_medium=affiliate&utm_campaign=unity_affiliateor we can use mesh.color
+- hex heights should have the options of being 3d. So the overlay itself should be able to go 3d
+- Option to make map edges look isometric

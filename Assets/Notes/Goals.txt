@@ -11,3 +11,12 @@ The Objective of this program is to find a more efficient and effective means to
 - The map will allow for the user to use different materials in order to generate their wanted textures
 
 - possible, there should be heights
+
+--------------------------------------
+
+NEW GOALS
+
+------------------------
+
+- Hex can either be pointy top or flat top
+- Each has can have a maximum of

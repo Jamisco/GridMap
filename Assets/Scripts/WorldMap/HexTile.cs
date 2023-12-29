@@ -1,12 +1,7 @@
-﻿using Assets.Scripts.Miscellaneous;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Unity.VisualScripting;
-using UnityEditor.PackageManager;
 using UnityEngine;
-using static Assets.Scripts.WorldMap.GridManager;
 using Random = System.Random;
 
 namespace Assets.Scripts.WorldMap
@@ -284,13 +279,13 @@ namespace Assets.Scripts.WorldMap
             return GetVectorBounds(minPos, maxPos, hexSettings).dimensions;
         }
         /// <summary>
-        /// Be aware that this function might not be accurate in some rare occasions. Due to the nature of the hex grid, there are some cases where the function will return the wrong value because of tiny discrepancies in distances. Thus it is recommended to also get the surrounding tiles and check if the tile is actually the closest one.
+        /// Will return Vector2Int.Left if nothing is found
         /// </summary>
         /// <param name="localPosition"></param>
         /// <returns></returns>
         public static Vector2Int GetGridCoordinate(Vector3 localPosition, HexSettings hexSettings)
         {
-            ExtensionMethods.ClearLog();
+            //ExtensionMethods.ClearLog();
             
             Vector3Int gridCoordinate = Vector3Int.zero;
 
@@ -306,7 +301,7 @@ namespace Assets.Scripts.WorldMap
 
             Vector2Int GetClosestGrid(int maxX, int maxZ)
             {
-                Vector2Int closest = Vector2Int.zero;
+                Vector2Int closest = Vector2Int.left;
                 float prevDistance = hexSettings.outerRadius * 2;
                 float distance = -1;
 
@@ -384,10 +379,7 @@ namespace Assets.Scripts.WorldMap
 
         public List<Vector3> Vertices = new List<Vector3>(6);
         public List<int> Triangles = new List<int>(12);
-
-        List<Vector3> SlopeVertices = new List<Vector3>(4);
-        List<Vector2> SlopeUV = new List<Vector2>(28);
-        List<int> SlopeTriangles = new List<int>(6);
+        
         Vector2[] BaseUV;
 
         public HexVisualData VisualData { get; set; } = new HexVisualData(Color.white);
@@ -595,11 +587,15 @@ namespace Assets.Scripts.WorldMap
             return hexTiles;
         }
 
-        public HexTile(int x, int z, HexSettings hexSettings)
+        public float Elevation { get; set; }
+
+        public HexTile(int x, int z, HexSettings hexSettings, float elevation = 0)
         {
             GridCoordinates = new Vector2Int(x, z);
 
             this.hexSettings = hexSettings;
+
+            Elevation = elevation;
 
             Position = GetPosition(x, 0, z, hexSettings);
 
@@ -776,21 +772,18 @@ namespace Assets.Scripts.WorldMap
         List<Vector3> CombineVertices()
         {
             List<Vector3> combinedVertices = new List<Vector3>(Vertices);
-            combinedVertices.AddRange(SlopeVertices);
 
             return combinedVertices;
         }
         List<int> CombineTriangles()
         {
             List<int> combinedTriangles = new List<int>(Triangles);
-            combinedTriangles.AddRange(SlopeTriangles);
 
             return combinedTriangles;
         }
         List<Vector2> CombineUV()
         {
             List<Vector2> combinedUV = new List<Vector2>(hexSettings.BaseHexUV);
-            combinedUV.AddRange(SlopeUV);
 
             return combinedUV;
         }
@@ -798,8 +791,6 @@ namespace Assets.Scripts.WorldMap
         {
             Vertices.Clear();
             Triangles.Clear();
-            SlopeVertices.Clear();
-            SlopeTriangles.Clear();
         }
         public Vector3 GetWorldVertexPosition(int index)
         {

@@ -41,6 +41,8 @@
 
             float _Text2Lerp;
             float _Text3Lerp;
+
+            //float _Elevations[];
             
             
             sampler2D _MainTex;
@@ -49,7 +51,7 @@
             
             struct appdata {
                 float4 vertex : POSITION;
-                float4 color : COLOR; // Assuming the colors are provided as float4 in the C# script
+                float4 color : COLOR;
                 float2 uv : TEXCOORD0;
             };
 

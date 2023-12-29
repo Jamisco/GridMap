@@ -12,18 +12,16 @@ using static Assets.Scripts.WorldMap.HexTile.HexVisualData;
 using static UnityEngine.GraphicsBuffer;
 
 [RequireComponent(typeof(GridManager))]
-[RequireComponent(typeof(BoxCollider))]
 public class GridSpawner : MonoBehaviour
 {
     public GridManager manager;
     public PlanetGenerator planet;
     public GridData gridData;
 
-    public BoxCollider boxCollider;
-
     Vector2Int mapSize;
 
     public bool useColor = true;
+    public bool disableUnseen = true;
     private void Awake()
     {
         
@@ -36,6 +34,11 @@ public class GridSpawner : MonoBehaviour
     private void Update()
     {
         OnMouseClick();
+
+        if (disableUnseen)
+        {
+            DisableUnseenChunks();
+        }
     }
 
     void Begin()
@@ -54,6 +57,26 @@ public class GridSpawner : MonoBehaviour
         manager.GenerateGrid();
     }
 
+    public float generateTime = 0f;
+
+    public void CanvasGenerate(Vector2Int size)
+    {
+        manager = GetComponent<GridManager>();
+        planet = GetComponent<PlanetGenerator>();
+
+        List<HexVisualData> visualData;
+
+        gridData.GridSize = size;
+        planet.MainPlanet.PlanetSize = gridData.GridSize;
+        planet.GenerateData();
+
+        mapSize = gridData.GridSize;
+        visualData = ConvertToHexVisual(planet.GetAllBiomes());
+        manager.InitializeGrid(gridData, visualData);
+        manager.GenerateGrid();
+
+        generateTime = manager.time;
+    }
     void SetHexVisualData()
     {
         planet.GenerateData();
@@ -129,13 +152,18 @@ public class GridSpawner : MonoBehaviour
                 return;
             }
 
-            newData.Highlight();
+            newData.Highlight(Color.green);
         }
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
             mousePos = GetMousePosition();
-            
+
+            if (!manager.PositionInGrid(mousePos))
+            {
+                return;
+            }
+
             newData =
                manager.GetHexDataAtPosition(mousePos);
 
@@ -168,12 +196,11 @@ public class GridSpawner : MonoBehaviour
 
         previousData.DeactivateBorder();
 
-        newData.ActivateBorder();
+        newData.ActivateBorder(Color.red);
         previousData = newData;
         
         //Debug.Log("Hovering Over Hex: " + newData.GridCoordinates.ToString());
     }
-
     private void DisableUnseenChunks()
     {
         Bounds bounds = Camera.main.OrthographicBounds3D();
@@ -191,8 +218,6 @@ public class GridSpawner : MonoBehaviour
         {
             HighlightedHexes.Add(hex.Hash, hex);
             // hex.Highlight();
-
-
             hex.ChangeColor(Color.black);
         }
     }

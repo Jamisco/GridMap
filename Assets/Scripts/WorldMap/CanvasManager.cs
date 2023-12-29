@@ -13,12 +13,15 @@ namespace Assets.Scripts.WorldMap
 {
     internal class CanvasManager : MonoBehaviour
     {
-        public GridManager gridManager;
+        public GridSpawner gridSpawner;
+        public MoveCamera moveCam;
 
         public Text fpsText;
 
         public InputField xInput;
         public InputField yInput;
+
+        public InputField scrollSpeed;
 
 
         public Button genButton;
@@ -32,6 +35,8 @@ namespace Assets.Scripts.WorldMap
             genButton.onClick.AddListener(GenClick);
 
             xInput.OnSelect(null);
+
+            scrollSpeed.onValueChanged.AddListener(delegate { ChangeScrollSpeed(); });
         }
 
         private void Update()
@@ -39,6 +44,11 @@ namespace Assets.Scripts.WorldMap
             CountFrame();
         }
 
+        private void ChangeScrollSpeed()
+        {
+            float speed = float.Parse(scrollSpeed.text);
+            moveCam.zoomSpeed = speed;
+        }
 
         public float updateInterval = 0.5f; // Time interval to update the frame rate
         private float accumulatedFrames = 0;
@@ -63,12 +73,11 @@ namespace Assets.Scripts.WorldMap
             int x = int.Parse(xInput.text);
             int y = int.Parse(yInput.text);
 
-            GridData data = gridManager.Data;
-            data.GridSize = new Vector2Int(x, y);
+            Vector2Int size = new Vector2Int(x, y);
 
-            gridManager.InitializeGrid(data);
+            gridSpawner.CanvasGenerate(size);
 
-            string parseTime = ExtensionMethods.ParseLogTimer("", gridManager.time);
+            string parseTime = ExtensionMethods.ParseLogTimer("", gridSpawner.generateTime);
 
             genTime.text = parseTime;
         }
