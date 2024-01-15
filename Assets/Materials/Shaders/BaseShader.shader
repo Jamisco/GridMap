@@ -135,7 +135,7 @@
                 
                 fixed4 ay = (_HeightColor.y - _HeightColor.x) * ((i.y - _HeightRange.x) / (_HeightRange.y - _HeightRange.x)) + _HeightColor.x;
                 
-                col *= ay;
+                //col *= ay;
                 return col;
             }   
             

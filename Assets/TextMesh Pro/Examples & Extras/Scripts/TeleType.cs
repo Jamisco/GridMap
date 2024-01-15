@@ -61,7 +61,7 @@ namespace TMPro.Examples
 
                 m_textMeshPro.maxVisibleCharacters = visibleCount; // How many characters should TextMeshPro display?
 
-                // Once the last character has been revealed, wait 1.0 second and start over.
+                // Once the last character has been revealed, wait 1.0 second and StartPosition over.
                 if (visibleCount >= totalVisibleCharacters)
                 {
                     yield return new WaitForSeconds(1.0f);

@@ -52,8 +52,8 @@ namespace TMPro.Examples
         IEnumerator AnimateVertexColors()
         {
 
-            // We force an update of the text object since it would only be updated at the end of the frame. Ie. before this code is executed on the first frame.
-            // Alternatively, we could yield and wait until the end of the frame when the text object will be generated.
+            // We force an update of the text object since it would only be updated at the EndPosition of the frame. Ie. before this code is executed on the first frame.
+            // Alternatively, we could yield and wait until the EndPosition of the frame when the text object will be generated.
             m_TextComponent.ForceMeshUpdate();
 
             TMP_TextInfo textInfo = m_TextComponent.textInfo;

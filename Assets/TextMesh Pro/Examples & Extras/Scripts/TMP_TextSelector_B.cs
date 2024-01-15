@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 
-#pragma warning disable 0618 // Disabled warning due to AddHex being deprecated until new release with SetMesh() is available.
+#pragma warning disable 0618 // Disabled warning due to QuickAddHex being deprecated until new release with SetMesh() is available.
 
 namespace TMPro.Examples
 {
@@ -327,7 +327,7 @@ namespace TMPro.Examples
                 uiVertices[vertexIndex + 2].color = c;
                 uiVertices[vertexIndex + 3].color = c;
 
-                m_TextMeshPro.canvasRenderer.AddHex(uiVertices, uiVertices.Length);
+                m_TextMeshPro.canvasRenderer.QuickAddHex(uiVertices, uiVertices.Length);
             }
             */
             #endregion
@@ -359,7 +359,7 @@ namespace TMPro.Examples
                     uiVertices[vertexIndex + 3].color = c;
                 }
 
-                m_TextMeshPro.canvasRenderer.AddHex(uiVertices, uiVertices.Length);
+                m_TextMeshPro.canvasRenderer.QuickAddHex(uiVertices, uiVertices.Length);
 
                 m_selectedWord = -1;
             }
@@ -387,7 +387,7 @@ namespace TMPro.Examples
                     uiVertices[vertexIndex + 3].color = c;
                 }
 
-                m_TextMeshPro.canvasRenderer.AddHex(uiVertices, uiVertices.Length);
+                m_TextMeshPro.canvasRenderer.QuickAddHex(uiVertices, uiVertices.Length);
             }
             */
             #endregion
@@ -439,7 +439,7 @@ namespace TMPro.Examples
                     uiVertices[vertexIndex + 3].color = c;
                 }
 
-                m_TextMeshPro.canvasRenderer.AddHex(uiVertices, uiVertices.Length);
+                m_TextMeshPro.canvasRenderer.QuickAddHex(uiVertices, uiVertices.Length);
                 #endregion
             }
             */

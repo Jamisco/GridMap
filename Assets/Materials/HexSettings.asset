@@ -15,7 +15,6 @@ MonoBehaviour:
   outerRadius: 1
   innerRadius: 0.8660254
   outerHexMultiplier: 0.1
-  stepDistance: 0
   innerHexSize: 0.2
   outerHexSize: 0.05
   maxHeight: 0

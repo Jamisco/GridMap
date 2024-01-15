@@ -1,0 +1,9 @@
+﻿For the hex chunk, 
+add funcitonality for layered mesh
+
+Layermesh will be layer over or below the mesh chunk
+Layermesh will use unity built in LayerMask to determine which layer it will be on
+Layermesh will have a means to set order in layer
+
+Layermesh can be instanced
+	- it will be the hex chunk that will loop through all layers and draw them if instanced

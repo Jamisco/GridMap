@@ -13,7 +13,7 @@ namespace Assets.Scripts.WorldMap.Biosphere
     [System.Serializable]
     public abstract class SurfaceBody
     {
-        protected static Dictionary<Biomes, BiomeData> BiomeDataList { get; private set; }
+        public static Dictionary<Biomes, BiomeData> BiomeDataList { get; private set; }
 
         public static void SetBiomeData(Dictionary<Biomes, BiomeData> data)
         {

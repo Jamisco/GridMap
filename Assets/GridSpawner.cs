@@ -2,6 +2,7 @@ using Assets.Scripts.Miscellaneous;
 using Assets.Scripts.WorldMap;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -17,6 +18,9 @@ public class GridSpawner : MonoBehaviour
     public GridManager manager;
     public PlanetGenerator planet;
     public GridData gridData;
+
+    public GameObject spriteParent;
+    public Sprite spriteToSpawn;
 
     Vector2Int mapSize;
 
@@ -34,18 +38,39 @@ public class GridSpawner : MonoBehaviour
     private void Update()
     {
         OnMouseClick();
-
+        OnMouseClick2();
+        //OnMouseClick2();
+        
         if (disableUnseen)
         {
             DisableUnseenChunks();
         }
     }
 
+    private void OnValidate()
+    {
+        if (!disableUnseen)
+        {
+            if(manager != null)
+            {
+                manager.SetAllChunksStatus(true);
+            }
+        }
+
+        layer = SortingLayer.NameToID(layerName);
+
+        if(layer == 0)
+        {
+            layer = 1111111;
+        }
+    }
+
     void Begin()
     {
+        ClearMap();
         manager = GetComponent<GridManager>();
         planet = GetComponent<PlanetGenerator>();
-        
+
         List<HexVisualData> visualData;
 
         planet.MainPlanet.PlanetSize = gridData.GridSize;
@@ -54,7 +79,8 @@ public class GridSpawner : MonoBehaviour
         mapSize = gridData.GridSize;  
         visualData = ConvertToHexVisual(planet.GetAllBiomes());
         manager.InitializeGrid(gridData, visualData);
-        manager.GenerateGrid();
+        manager.InitiateDrawProtocol();
+
     }
 
     public float generateTime = 0f;
@@ -73,7 +99,7 @@ public class GridSpawner : MonoBehaviour
         mapSize = gridData.GridSize;
         visualData = ConvertToHexVisual(planet.GetAllBiomes());
         manager.InitializeGrid(gridData, visualData);
-        manager.GenerateGrid();
+        manager.ImmediateDrawGrid();
 
         generateTime = manager.time;
     }
@@ -130,6 +156,10 @@ public class GridSpawner : MonoBehaviour
 
     Dictionary<int, HexData> HighlightedHexes = new Dictionary<int, HexData>();
     Dictionary<int, HexData> ActivatedBorderHexes = new Dictionary<int, HexData>();
+
+
+    public int layer;
+    public string layerName;
     private void OnMouseClick()
     {
         HexData newData;
@@ -139,68 +169,84 @@ public class GridSpawner : MonoBehaviour
         {
             mousePos = GetMousePosition();
 
-            if (!manager.PositionInGrid(mousePos))
+            if (!manager.PositionHasDrawnHex(mousePos))
             {
                 return;
             }
             
             newData = 
-                manager.GetHexDataAtPosition(mousePos);
+                manager.GetHexData(mousePos);
 
             if (newData.IsNullOrEmpty())
             {
                 return;
             }
 
-            newData.Highlight(Color.green);
+            newData.Test();
+
+            Debug.Log("Hex at position: "
+                + newData.GridCoordinates.ToString());
         }
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
             mousePos = GetMousePosition();
 
-            if (!manager.PositionInGrid(mousePos))
+            if (!manager.PositionHasDrawnHex(mousePos))
             {
                 return;
             }
-
+            
             newData =
-               manager.GetHexDataAtPosition(mousePos);
+               manager.GetHexData(mousePos);
 
             if (!newData.IsNullOrEmpty())
             {
-                newData.UnHighlight();
+                newData.AddLayer(layer);
             }
+
+            //newData.ActivateAllBorders(Color.yellow);
 
             // check if hex exists before highligthing, actibing border et
         }
     }
 
-    HexData previousData = new HexData();
-    private void HighlightOnHover()
+    int side = 0;
+    private void OnMouseClick2()
     {
-        Vector3 mousePos = GetMousePosition();
-
-        if (!manager.PositionInGrid(mousePos))
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            return;
+            Vector3 mousePos = GetMousePosition();
+
+            if (!manager.PositionHasDrawnHex(mousePos))
+            {
+                return;
+            }
+
+            HexData data = manager.GetHexData(mousePos);
+
+            //Color[] colors = new Color[6] { Color.red, Color.blue, Color.green, Color.yellow, Color.magenta, Color.cyan };
+
+            //data.ActivateAllBorders(colors);
+
+            //data.Test();
         }
-
-        // hextile.GetGridCoordinate() is not accurate
-        HexData newData = manager.GetHexDataAtPosition(mousePos);
-
-        if (newData.IsNullOrEmpty() || newData == previousData)
-        {
-            return;
-        }
-
-        previousData.DeactivateBorder();
-
-        newData.ActivateBorder(Color.red);
-        previousData = newData;
         
-        //Debug.Log("Hovering Over Hex: " + newData.GridCoordinates.ToString());
+        if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            Vector3 mousePos = GetMousePosition();
+
+            if (!manager.PositionHasDrawnHex(mousePos))
+            {
+                return;
+            }
+
+            HexData data = manager.GetHexData(mousePos);
+
+            data.DeactivateAllBorders();
+        }
     }
+
     private void DisableUnseenChunks()
     {
         Bounds bounds = Camera.main.OrthographicBounds3D();
@@ -242,11 +288,26 @@ public class GridSpawner : MonoBehaviour
 
     private Vector3 GetMousePosition()
     {
-        Vector3 mousePos = Mouse.current.position.ReadValue();
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
 
-        mousePos = Camera.main.ScreenToWorldPoint(mousePos);
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+            // The ray hit something, return the point in world space
+            return hit.point;
+        }
+        else
+        {
+            // The ray didn't hit anything, you might return a default position or handle it as needed
+            return Vector3.negativeInfinity;
+        }
+    }
 
-        return mousePos;
+    public void ClearMap()
+    {
+        if (manager != null)
+        {
+            manager.ClearMap();
+        }
     }
 
 
@@ -262,6 +323,7 @@ public class GridSpawner : MonoBehaviour
 
             if (GUILayout.Button("Generate Grid"))
             {
+                exampleScript.ClearMap();
                 exampleScript.Begin();
             }
         }

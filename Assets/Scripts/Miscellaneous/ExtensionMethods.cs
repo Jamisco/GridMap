@@ -42,7 +42,7 @@ namespace Assets.Scripts.Miscellaneous
             position.y = 0;
 
             Bounds bounds = new Bounds(position,
-                            new Vector3(cameraHeight * screenAspect, 0,                                 cameraHeight));
+                            new Vector3(cameraHeight * screenAspect, 0, cameraHeight));
             return bounds;
         }
 
@@ -91,7 +91,7 @@ namespace Assets.Scripts.Miscellaneous
         }
 
         public static float NextFloat(this Random RandGenerator, float MinValue, float MaxValue)
-        {            
+        {
             float ran = (float)(RandGenerator.NextDouble() * (MaxValue - MinValue) + MinValue);
 
             return ran;
@@ -177,6 +177,45 @@ namespace Assets.Scripts.Miscellaneous
             return true;
         }
 
+        public static int FindIndex(this int[] array, int[] subarray)
+        {
+            for (int i = 0; i <= array.Length - subarray.Length; i++)
+            {
+                bool found = true;
+
+                for (int j = 0; j < subarray.Length; j++)
+                {
+                    if (array[i + j] != subarray[j])
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+
+                if (found)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        public static int FindIndex(this List<int> list, List<int> subList)
+        {
+            int[] mainArray = list.ToArray();
+            int[] subArray = subList.ToArray();
+
+            return mainArray.FindIndex(subArray);
+        }
+
+        public static int FindIndex(this List<int> list, int[] subArray)
+        {
+            int[] mainArray = list.ToArray();
+            
+            return mainArray.FindIndex(subArray);
+        }
+
 
         public static Mesh CloneMesh(this Mesh parent)
         {
@@ -198,17 +237,82 @@ namespace Assets.Scripts.Miscellaneous
             mesh.RecalculateTangents();
             return mesh;
         }
-        
+
+        /// <summary>
+        /// Will set all the vertices of a mesh to the given color
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="color"></param>
         public static void SetFullColor(this Mesh mesh, Color color)
         {
-            List<Color> colors = new List<Color>();
-            
-            for (int i = 0; i < mesh.vertexCount; i++)
+            Color[] colors = new Color[mesh.vertexCount];
+
+            for (int i = 0; i < colors.Length; i++)
             {
-                colors.Add(color);
+                colors[i] = color;
             }
 
             mesh.colors = colors.ToArray();
+        }
+
+        /// <summary>
+        /// Will set the color of a mesh in groups. All the groups must be of equal size. Ex, if the mesh has 12 vertices, and the group size is 4, then the color list must be of size 12.
+        /// </summary>
+        /// <param name="aMesh"></param>
+        /// <param name="colors">The colors for each respective group</param>
+        /// <param name="groupCount"> The number of vertices in one group</param>
+        public static void SetGroupColors(this Mesh aMesh, Color[] colors,
+            int groupCount)
+        {
+            if (aMesh.vertexCount % groupCount != 0)
+            {
+                throw new ArgumentNullException("Sizes of mesh vertices does not evenly fit into given group");
+            }
+
+            if (colors.Length % groupCount != 0)
+            {
+                throw new ArgumentNullException("Sizes of color array does not evenly fit into given group");
+            }
+
+            Color[] meshColors = new Color[aMesh.vertexCount];
+
+            for (int i = 0; i < colors.Length; i++)
+            {
+                meshColors[i] = colors[i % groupCount];
+            }
+
+            aMesh.colors = colors.ToArray();
+        }
+
+        /// <summary>
+        /// Makes the y property of the vector2Int the z property of a vector3int. The vector3Int y position is said to zero. 
+        /// </summary>
+        /// <param name="gridPosiotion"></param>
+        /// <returns></returns>
+        public static Vector3Int ToBoundsGridPos(this Vector2Int vector)
+        {
+            Vector3Int pos = new Vector3Int();
+
+            pos.x = vector.x;
+            pos.y = 0;
+            pos.z = vector.y;
+
+            return pos;
+        }
+
+        /// <summary>
+        /// Makes the Z property of the vector3Int the y property of a vector3int.
+        /// </summary>
+        /// <param name="vector"></param>
+        /// <returns></returns>
+        public static Vector2Int ToGridPos(this Vector3Int vector)
+        {
+            Vector2Int pos = new Vector2Int();
+
+            pos.x = vector.x;
+            pos.y = vector.z;
+
+            return pos;
         }
 
     }

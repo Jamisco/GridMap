@@ -17,7 +17,7 @@ namespace TMPro.Examples
 
         void Start()
         {
-            // Add new TextMesh Pro Component
+            // AddHex new TextMesh Pro Component
             m_textMeshPro = gameObject.AddComponent<TextMeshPro>();
 
             m_textMeshPro.autoSizeTextContainer = true;

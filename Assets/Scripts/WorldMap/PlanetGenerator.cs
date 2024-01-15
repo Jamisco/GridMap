@@ -77,7 +77,6 @@ namespace Assets.Scripts.WorldMap
         private void Awake()
         {
             UpdateNoise();
-            SurfaceBody.SetBiomeData(biomeDataStorage.GetData());
         }
 
         public Vector2Int PlanetSize
@@ -115,6 +114,11 @@ namespace Assets.Scripts.WorldMap
                 RandomBiomeColor = false;
             }
 
+            if(SurfaceBody.BiomeDataList == null)
+            {
+                SurfaceBody.SetBiomeData(biomeDataStorage.GetData());
+            }
+            
             UpdateNoise();
         }
 

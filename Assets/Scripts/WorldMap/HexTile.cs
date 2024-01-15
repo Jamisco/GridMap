@@ -11,81 +11,6 @@ namespace Assets.Scripts.WorldMap
         public HexSettings hexSettings;
 
         /// <summary>
-        /// The index is the respective i
-        /// Will return a tuple of 3 ints,
-        /// int 1 = x direction, int 2 = y direction, int 3 = x offset
-        /// If you are on a even x axis, that is an offset, so add the offset number to the x
-        /// </summary>
-        public static (int, int, int)[] StepVertexModifier =
-        {
-             new (0, 1, 1),
-             new (1, 0, 0),
-             new (0, -1, 1),
-             new (-1, -1, 1),
-             new (-1, 0, 0),
-             new (-1, 1, 1 ),
-        };
-
-        private Vector3 InnerVertexPosition(int i)
-        {
-            return hexSettings.VertexCorners[i];
-        }
-
-        private Vector3 OuterVertexPosition(int i)
-        {
-            return hexSettings.VertexCorners[i] * hexSettings.outerHexMultiplier;
-        }
-
-        private Vector3 StepOuterVertexPosition(int i)
-        {
-            (int, int, int) temp = StepVertexModifier[i];
-
-            if (IsOffset)
-            {
-                temp.Item1 += temp.Item3;
-            }
-
-            // we multiply step by 2 because, the step applies to both hexes
-            // hex1 1 is shifted 3 units away, and hex1 is also shifted 3 units away
-            // totaling 6
-            Vector3 mod = new Vector3(temp.Item1, 0f, temp.Item2) * ((hexSettings.stepDistance / 2));
-
-            return mod;
-        }
-
-        /// <summary>
-        /// Is true when the Y position of the coordinates is odd
-        /// </summary>
-        public bool IsOffset
-        {
-            get
-            {
-                return GridCoordinates.y % 2 == 0 ? false : true;
-            }
-        }
-
-        public static Axial[] SurroundingHexes =
-        {
-            new Axial(0, -1, 1),
-            new Axial(1,-1, 0),
-            new Axial(1, 0, -1),
-            new Axial(0, 1, -1),
-            new Axial(-1, 1, 0),
-            new Axial(-1, 0, 1)
-        };
-
-        // will return the index of the corners that are required to form triangles for the slopes. Indexes are in clockwise order of the hex1 whose surrounding your using
-        public static (int, int, int)[] OppositeCorners =
-        {
-            (4, 3, 5),
-            (5, 4, 0),
-            (0, 5, 1),
-            (1, 0, 2),
-            (2, 1, 3),
-            (3, 2, 4)
-        };
-
-        /// <summary>
         /// A coordinate system for hexagonal Grids that uses three axes, X, Y, and Z. The X-axis points southeast, the Y-axis points south, and the Z-axis points southwest. The sum of the three axial coordinates should always be 0. Used to overcome the offset of the hexagonal Grid.
         /// </summary>
         public struct Axial : IEquatable<Axial>, IComparable<Axial>
@@ -226,9 +151,9 @@ namespace Assets.Scripts.WorldMap
         {
             Vector3 position;
             // it looks thsame but i assure u, its differnt
-            position.x = (x + (z * 0.5f) - (z / 2)) * (hexSettings.innerRadius * 2f) + (x * hexSettings.stepDistance);
+            position.x = (x + (z * 0.5f) - (z / 2)) * (hexSettings.innerRadius * 2f);
             position.y = y;
-            position.z = z * (hexSettings.outerRadius * 1.5f) + (z * hexSettings.stepDistance);
+            position.z = z * (hexSettings.outerRadius * 1.5f);
 
             return position;
         }
@@ -245,7 +170,7 @@ namespace Assets.Scripts.WorldMap
 
         private static float GetPositionZ(int z, HexSettings hexSettings)
         {
-            return z * (hexSettings.outerRadius * 1.5f) + (z * hexSettings.stepDistance);
+            return z * (hexSettings.outerRadius * 1.5f);
         }
 
         /// <summary>
@@ -255,7 +180,7 @@ namespace Assets.Scripts.WorldMap
         /// <param name="maxPos"></param>
         /// <param name="hexSettings"></param>
         /// <returns></returns>
-        public static (Vector3 min, Vector3 max, Vector3 dimensions) 
+        public static (Vector3 min, Vector3 max, Vector3 size) 
             GetVectorBounds(Vector2Int minPos, Vector2Int maxPos, HexSettings hexSettings)
         {
             HexTile minHex = new HexTile(minPos.x, minPos.y, hexSettings);
@@ -274,9 +199,27 @@ namespace Assets.Scripts.WorldMap
             return (min, max, max - min);
         }
 
-        public static Vector3 GetDimensions(Vector2Int minPos, Vector2Int maxPos, HexSettings hexSettings)
+        /// <summary>
+        /// Given the min and max positions of the hexes in the given area, this will return the bounds of the area
+        /// </summary>
+        /// <param name="bounds"></param>
+        /// <param name="hexSettings"></param>
+        /// <returns></returns>
+        public static Bounds GetWorldBounds(BoundsInt bounds,
+                                    HexSettings hexSettings)
         {
-            return GetVectorBounds(minPos, maxPos, hexSettings).dimensions;
+            Vector2Int min = new Vector2Int(bounds.min.x, bounds.min.z);
+
+            Vector2Int max = new Vector2Int(bounds.max.x, bounds.max.z);
+
+            (Vector3 min, Vector3 max, Vector3 size) vb = HexTile.GetVectorBounds(min, max, hexSettings);
+
+            return new Bounds((vb.min + vb.max) / 2, vb.max - vb.min);
+        }
+
+        public static Vector3 GetSize(Vector2Int minPos, Vector2Int maxPos, HexSettings hexSettings)
+        {
+            return GetVectorBounds(minPos, maxPos, hexSettings).size;
         }
         /// <summary>
         /// Will return Vector2Int.Left if nothing is found
@@ -374,8 +317,8 @@ namespace Assets.Scripts.WorldMap
             }
         }
         
-        public Vector2Int GridCoordinates;
-        public Vector3 Position { get; private set; }
+        public Vector2Int GridPosition;
+        public Vector3 LocalPosition { get; private set; }
 
         public List<Vector3> Vertices = new List<Vector3>(6);
         public List<int> Triangles = new List<int>(12);
@@ -387,27 +330,16 @@ namespace Assets.Scripts.WorldMap
         /// <summary>
         /// Quick access to the X coordinates of the tile
         /// </summary>
-        public int X { get { return GridCoordinates.x; } }
+        public int X { get { return GridPosition.x; } }
 
         /// <summary>
         /// Quick access to the Y coordinates of the tile
         /// </summary>
-        public int Y { get { return GridCoordinates.y; } }
+        public int Y { get { return GridPosition.y; } }
 
         public GridManager Grid { get; private set; }
 
-        // We should pass the planet instead
-
-        Random random = new Random();
-        ///public static void CreateSlopes(Dictionary<Axial, HexTile> hexes)
-        //{
-        //    Parallel.ForEach(hexes.Values, (hexTile) =>
-        //    {
-        //        hexTile.CreateSlopeMesh();
-        //    });
-
-        //}
-        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, ref List<HexChunk> hexChunks)
+        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, List<HexChunk> hexChunks)
         {
             // we define the size of the dictionary to avoid resizing it, which slows things down
             Dictionary<Vector2Int, HexTile> hexTiles = new Dictionary<Vector2Int, HexTile>(MapSize.x * MapSize.y + 10);
@@ -417,18 +349,18 @@ namespace Assets.Scripts.WorldMap
             //{
             //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
             //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-            //    int chunkBoundsYMin = chunk.ChunkBounds.yMin;
-            //    int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+            //    int chunkBoundsZMin = chunk.ChunkBounds.yMin;
+            //    int chunkBoundsZMax = chunk.ChunkBounds.yMax;
 
             //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
             //    {
-            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        for (int z = chunkBoundsZMin; z < chunkBoundsZMax; z++)
             //        {
             //            HexTile hc = new HexTile(x, z);
 
             //            hexTiles[hc.AxialCoordinates] = hc;
 
-            //            chunk.AddHex(hc);
+            //            chunk.QuickAddHex(hc);
             //        }
             //    }
             //});
@@ -444,12 +376,12 @@ namespace Assets.Scripts.WorldMap
             //    HexChunk chunk = chunky[chunkIndex];
             //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
             //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-            //    int chunkBoundsYMin = chunk.ChunkBounds.yMin;
-            //    int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+            //    int chunkBoundsZMin = chunk.ChunkBounds.yMin;
+            //    int chunkBoundsZMax = chunk.ChunkBounds.yMax;
 
             //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
             //    {
-            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        for (int z = chunkBoundsZMin; z < chunkBoundsZMax; z++)
             //        {
             //            HexTile hc = new HexTile(x, z);
 
@@ -458,7 +390,7 @@ namespace Assets.Scripts.WorldMap
             //                hexTiles[hc.AxialCoordinates] = hc;
             //            }
 
-            //            chunk.AddHex(hc);
+            //            chunk.QuickAddHex(hc);
             //        }
             //    }
             //});
@@ -477,18 +409,22 @@ namespace Assets.Scripts.WorldMap
                 HexChunk chunk = hexChunks[chunkIndex];
                 int chunkBoundsXMin = chunk.ChunkBounds.xMin;
                 int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-                int chunkBoundsYMin = chunk.ChunkBounds.zMin;
-                int chunkBoundsYMax = chunk.ChunkBounds.zMax;
+                int chunkBoundsZMin = chunk.ChunkBounds.zMin;
+                int chunkBoundsZMax = chunk.ChunkBounds.zMax;
+
+                // It must be understood that the chunk bounds are not the same as the map size. The entirity of the bounds must not necessarily be within the map size or used
+                chunkBoundsXMax = Mathf.Clamp(chunkBoundsXMax, 0, MapSize.x);
+                chunkBoundsZMax = Mathf.Clamp(chunkBoundsZMax, 0, MapSize.y);
 
                 for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
                 {
-                    for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+                    for (int z = chunkBoundsZMin; z < chunkBoundsZMax; z++)
                     {
                         HexTile hc = new HexTile(x, z, settings);
 
-                        hexTiles[hc.GridCoordinates] = hc;
+                        hexTiles[hc.GridPosition] = hc;
 
-                        chunk.AddHex(hc);
+                        chunk.QuickAddHex(hc);
                     }
                 }
             }
@@ -496,7 +432,7 @@ namespace Assets.Scripts.WorldMap
             return hexTiles;
         }
 
-        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, ref List<HexChunk> hexChunks, List<HexVisualData> data)
+        public static Dictionary<Vector2Int, HexTile> CreatesHexes(GridManager grid, Vector2Int MapSize, List<HexChunk> hexChunks, List<HexVisualData> data)
         {
             // we define the size of the dictionary to avoid resizing it, which slows things down
             Dictionary<Vector2Int, HexTile> hexTiles = new Dictionary<Vector2Int, HexTile>(MapSize.x * MapSize.y + 10);
@@ -508,18 +444,18 @@ namespace Assets.Scripts.WorldMap
             //{
             //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
             //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-            //    int chunkBoundsYMin = chunk.ChunkBounds.yMin;
-            //    int chunkBoundsYMax = chunk.ChunkBounds.yMax;
+            //    int chunkBoundsZMin = chunk.ChunkBounds.yMin;
+            //    int chunkBoundsZMax = chunk.ChunkBounds.yMax;
 
             //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
             //    {
-            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        for (int z = chunkBoundsZMin; z < chunkBoundsZMax; z++)
             //        {
             //            HexTile hc = new HexTile(x, z);
 
             //            hexTiles[hc.AxialCoordinates] = hc;
 
-            //            chunk.AddHex(hc);
+            //            chunk.QuickAddHex(hc);
             //        }
             //    }
             //});
@@ -536,18 +472,18 @@ namespace Assets.Scripts.WorldMap
 
             //    int chunkBoundsXMin = chunk.ChunkBounds.xMin;
             //    int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-            //    int chunkBoundsYMin = chunk.ChunkBounds.zMin;
-            //    int chunkBoundsYMax = chunk.ChunkBounds.zMax;
+            //    int chunkBoundsZMin = chunk.ChunkBounds.zMin;
+            //    int chunkBoundsZMax = chunk.ChunkBounds.zMax;
 
             //    for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
             //    {
-            //        for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+            //        for (int z = chunkBoundsZMin; z < chunkBoundsZMax; z++)
             //        {
             //            HexTile hc = new HexTile(x, z, hexSettings);
 
-            //            hexTiles[hc.GridCoordinates] = hc;
+            //            hexTiles[hc.GridPosition] = hc;
 
-            //            chunk.AddHex(hc);
+            //            chunk.QuickAddHex(hc);
             //        }
             //    }
             //});
@@ -564,22 +500,26 @@ namespace Assets.Scripts.WorldMap
                 HexChunk chunk = hexChunks[chunkIndex];
                 int chunkBoundsXMin = chunk.ChunkBounds.xMin;
                 int chunkBoundsXMax = chunk.ChunkBounds.xMax;
-                int chunkBoundsYMin = chunk.ChunkBounds.zMin;
-                int chunkBoundsYMax = chunk.ChunkBounds.zMax;
+                int chunkBoundsZMin = chunk.ChunkBounds.zMin;
+                int chunkBoundsZMax = chunk.ChunkBounds.zMax;
+
+                // It must be understood that the chunk bounds are not the same as the map size. The entirity of the bounds must not necessarily be within the map size or used
+                chunkBoundsXMax = Mathf.Clamp(chunkBoundsXMax, 0, MapSize.x);
+                chunkBoundsZMax = Mathf.Clamp(chunkBoundsZMax, 0, MapSize.y);
 
                 for (int x = chunkBoundsXMin; x < chunkBoundsXMax; x++)
                 {
-                    for (int z = chunkBoundsYMin; z < chunkBoundsYMax; z++)
+                    for (int z = chunkBoundsZMin; z < chunkBoundsZMax; z++)
                     {
                         hc = new HexTile(x, z, hexSettings);
 
-                        hexTiles.Add(hc.GridCoordinates, hc);
+                        hexTiles.Add(hc.GridPosition, hc);
 
                         int index = (z * MapSize.x) + x;
 
                         hc.VisualData = data.ElementAtOrDefault(index);
 
-                        chunk.AddHex(hc);
+                        chunk.QuickAddHex(hc);
                     }
                 }
             }
@@ -591,13 +531,13 @@ namespace Assets.Scripts.WorldMap
 
         public HexTile(int x, int z, HexSettings hexSettings, float elevation = 0)
         {
-            GridCoordinates = new Vector2Int(x, z);
+            GridPosition = new Vector2Int(x, z);
 
             this.hexSettings = hexSettings;
 
             Elevation = elevation;
 
-            Position = GetPosition(x, 0, z, hexSettings);
+            LocalPosition = GetPosition(x, 0, z, hexSettings);
 
             CreateBaseMesh();
         }
@@ -609,144 +549,6 @@ namespace Assets.Scripts.WorldMap
 
             BaseUV = hexSettings.BaseHexUV;
         }
-
-        /// <summary>
-        /// Will create an outer hex1 surrounding the inner hex1. This should be called immediatel after creating the inner hex1
-        /// </summary>
-        private void CreateOuterHexMesh()
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                Vertices.Add(OuterVertexPosition(i));
-            }
-
-            for (int i = 0; i < 6; i++)
-            {
-                Triangles.AddRange(SetOuterTriangles(i + 6));
-            }
-        }
-
-        // To Do update this to use Y position
-        //public void CreateSlopeMesh()
-        //{
-        //    if (hexSettings.stepDistance == 0 && hexSettings.maxHeight == 0)
-        //    {
-        //        // there are no slopes
-        //        return;
-        //    }
-
-        //    SlopeVertices.Clear();
-        //    SlopeTriangles.Clear();
-
-        //    List<HexTile> surroundingHex = GetSurroundingHexes();
-
-        //    for (int i = 0; i < 6; i++)
-        //    {
-        //        HexTile hex1 = surroundingHex[i];
-
-        //        if (hex1 == null)
-        //        {
-        //            continue;
-        //        }
-
-        //        // p1 and p2 denote the 2 points on the current i side in clockwise order
-
-        //        int p1 = i;
-        //        // so the last one loops back to the first one
-        //        int p2 = (i + 1) % 6;
-
-        //        Vector3 pos1 = Vertices[p1];
-        //        Vector3 pos2 = Vertices[p2];
-
-        //        // the current hex1's i vertices
-        //        Vector3 pos3 = StepOuterVertexPosition(i) + Vertices[p1];
-        //        Vector3 pos4 = StepOuterVertexPosition(i) + Vertices[p2];
-
-        //        pos3.y -= (Position.y - hex1.Position.y) / 2;
-        //        pos4.y -= (Position.y - hex1.Position.y) / 2;
-
-        //        int sv = SlopeVertices.Count + Vertices.Count;
-
-        //        SlopeVertices.Add(pos1); // sv + 0
-        //        SlopeVertices.Add(pos2); // sv + 1
-
-        //        SlopeVertices.Add(pos3); // sv + 2
-        //        SlopeVertices.Add(pos4); // sv + 3
-
-        //        SlopeTriangles.AddRange(new int[6] {
-        //                sv + 0, sv + 2, sv + 3,
-        //                sv + 0, sv + 3, sv + 1
-        //            });
-
-        //        float heightDiff = Mathf.Abs(hex1.Position.y - Position.y);
-
-        //        SlopeUV.AddRange(hexSettings.GetSlopeUV(heightDiff));
-
-        //        // Check for next surrounding hex1
-        //        // if it exist, add triangle
-        //        // we do this bcuz there is a little gap between the 2 slope of the hex
-
-        //        // next surrounding hex1
-        //        int nextSide = (i + 1) % 6;
-
-        //        HexTile hex2 = surroundingHex[nextSide];
-
-        //        Vector3 center;
-        //        Vector3 IPos3;
-
-        //        if (hex2 != null && true)
-        //        {
-        //            // hex2 connecting vertex
-        //            IPos3 = StepOuterVertexPosition(nextSide) + Vertices[p2];
-        //            IPos3.y -= (Position.y - hex2.Position.y) / 2;
-
-        //            Vector3 hex1Corner, hex2Corner;
-
-        //            // the corners of the surrounding hex, so we can get their centers
-        //            hex1Corner = StepOuterVertexPosition(i) * 2 + pos2;
-        //            hex2Corner = StepOuterVertexPosition(nextSide) * 2 + pos2;
-
-        //            hex1Corner.y -= (Position.y - hex1.Position.y);
-        //            hex2Corner.y -= (Position.y - hex2.Position.y);
-
-        //            center = GetTriangleCenter(pos2, hex1Corner, hex2Corner);
-
-        //            // sv + 1 = pos2 (current hex 2 vertex for slope)
-        //            // sv + 3 = pos4 (current hex last slope vertex)
-
-        //            SlopeVertices.Add(IPos3); // sv + 4
-        //            SlopeVertices.Add(center); // sv + 5
-
-        //            // SlopeUV.Add(new Vector2()
-
-        //            SlopeTriangles.AddRange(new int[6] {
-        //                sv + 1, sv + 3, sv + 4,
-        //                sv + 3, sv + 5, sv + 4
-        //            });
-
-        //            SlopeUV.AddRange(hexSettings.GetMidTriangleSlopeUV(heightDiff));
-        //        }
-
-        //        Vector3 GetTriangleCenter(Vector3 pos1, Vector3 pos2, Vector3 pos3)
-        //        {
-        //            return (pos1 + pos2 + pos3) / 3f;
-        //        }
-        //    }
-        //}
-        //public List<HexTile> GetSurroundingHexes()
-        //{
-        //    List<HexTile> surroundingHexs = new List<HexTile>();
-
-        //    for (int i = 0; i < 6; i++)
-        //    {
-        //        Axial sPos = AxialCoordinates + SurroundingHexes[i];
-
-        //        will include null
-        //        surroundingHexs.Add(Grid.GetHexTile(sPos));
-        //    }
-
-        //    return surroundingHexs;
-        //}
 
         Mesh mesh;
         public Mesh GetMesh()
@@ -794,7 +596,7 @@ namespace Assets.Scripts.WorldMap
         }
         public Vector3 GetWorldVertexPosition(int index)
         {
-            return Vertices[index] + Position;
+            return Vertices[index] + LocalPosition;
         }
         public int VertexCount()
         {
@@ -802,7 +604,7 @@ namespace Assets.Scripts.WorldMap
         }
         public override int GetHashCode()
         {
-            return HashCode.Combine(GridCoordinates, AxialCoordinates, Position, mesh);
+            return HashCode.Combine(GridPosition, AxialCoordinates, LocalPosition, mesh);
         }
 
 
@@ -954,7 +756,7 @@ namespace Assets.Scripts.WorldMap
 
         public class HexException : Exception
         {
-            public enum ErrorType { NotInGrid, NotInChunk}
+            public enum ErrorType { NotInGrid, NotInChunk, AlreadyInGrid}
 
             private ErrorType errorType;
 
@@ -987,22 +789,9 @@ namespace Assets.Scripts.WorldMap
 
             private static string GetMessage(string position, bool isWorldPos, ErrorType error)
             {
-                string GridOrChunk = "";
                 string WorldOrGrid = "";
-
-                switch (error)
-                {
-                    case ErrorType.NotInGrid:
-                        GridOrChunk = "Grid";
-                        break;
-                    case ErrorType.NotInChunk:
-                        GridOrChunk = "Chunk";
-                        break;
-                    default:
-                        GridOrChunk = "Grid";
-                        break;
-                }
-
+                string message = "";
+                
                 if (isWorldPos)
                 {
                     WorldOrGrid = "World";
@@ -1012,7 +801,7 @@ namespace Assets.Scripts.WorldMap
                     WorldOrGrid = "Grid";
                 }
 
-                string message = $"Hex at {WorldOrGrid} Position ({position}) Not Found In {GridOrChunk}";
+                message = $"Hex at {WorldOrGrid} Position ({position}) {error} ";
 
                 return message;
             }

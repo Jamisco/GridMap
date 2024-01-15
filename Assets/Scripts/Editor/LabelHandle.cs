@@ -21,8 +21,8 @@ class LabelHandle : Editor
 
         Handles.color = Color.red;
 
-        Handles.Label(hex.Position + Vector3.up * 3,
-                      "\nPosition: " + hex.Position.ToString() +
+        Handles.Label(hex.LocalPosition + Vector3.up * 3,
+                      "\nPosition: " + hex.LocalPosition.ToString() +
                       "\nCoordinate: " + hex.AxialCoordinates.ToString() +
             "\nShieldArea: " +
             handleExample.shieldArea.ToString());
@@ -35,7 +35,7 @@ class LabelHandle : Editor
         Handles.EndGUI();
 
 
-        //Handles.DrawWireArc(hex.Position,
+        //Handles.DrawWireArc(hex.LocalPosition,
         //    handleExample.transform.up,
         //    -handleExample.transform.right,
         //    180,

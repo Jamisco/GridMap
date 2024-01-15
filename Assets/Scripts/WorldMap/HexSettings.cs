@@ -1,4 +1,5 @@
 ﻿using Assets.Scripts.Miscellaneous;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,8 +21,6 @@ namespace Assets.Scripts.WorldMap
         public float innerRadius;
 
         public float outerHexMultiplier = 1f;
-
-        public float stepDistance;
 
         [Tooltip("The size of the edges when highlighting." +
             " This is as a percentage of space to occupy ")]
@@ -63,7 +62,7 @@ namespace Assets.Scripts.WorldMap
             };
 
             InnerHighlighter = null;
-            HexSize = new Vector2(outerRadius * 2f + stepDistance, innerRadius * 2f + stepDistance);
+            HexSize = new Vector2(outerRadius * 2f, innerRadius * 2f);
         }
 
         public void ResetVariables()
@@ -83,74 +82,6 @@ namespace Assets.Scripts.WorldMap
                     new Vector2(0.5f, 0),
                     new Vector2(0, 0.25f),
                     new Vector2(0, 0.75f)
-                };
-            }
-        }
-        public Vector2[] GetSlopeUV(float height)
-        {
-            // this can be improved... by adding to the base UV
-            Vector2[] slopes = SlopeHexUV;
-
-            for (int i = 0; i < slopes.Length; i++)
-            {
-                slopes[i].y
-                    *= CalculateHypotenuse(height / 2, stepDistance / 2) / innerRadius;
-            }
-
-            return slopes;
-        }
-        public float CalculateHypotenuse(float sideA, float sideB)
-        {
-            // Calculate the length of the hypotenuse using the Pythagorean theorem
-            float hypotenuse = Mathf.Sqrt(sideA * sideA + sideB * sideB);
-            return hypotenuse;
-        }
-        public Vector2[] GetMidTriangleSlopeUV(float height)
-        {
-            Vector2[] slopes = GetSlopeUV(height);
-
-            // index 1 = bottom right
-            // index 3 = top right
-
-            /// This works by getting the UV of the slopes,
-            /// calculating the sizes and adding them.... i recommend u comment out code to see how they work.
-            /// 
-
-            List<Vector2> newSlopes = new List<Vector2>();
-
-            float increment = Mathf.Abs(slopes[1].y - slopes[3].y);
-
-            Vector2 slopeTop = slopes[3];
-
-            Vector2 slopeRight = new Vector2(slopes[1].x + increment, slopes[1].y);
-            Vector2 slopeRightTop = new Vector2(slopeRight.x, slopeRight.y + increment);
-
-            Vector2 midSlope = (slopeTop + slopeRightTop + slopeRight) / 3f;
-
-            newSlopes.Add(slopeRight);
-            newSlopes.Add(midSlope);
-
-            //for (int i = 0; i < slopes.Length; i++)
-            //{
-            //    slopes[i].y
-            //        *= CalculateHypotenuse(height / 2, stepDistance / 2) / outerRadius;
-            //}
-
-            return newSlopes.ToArray();
-        }
-        public Vector2[] SlopeHexUV
-        {
-            get
-            {
-                // this is from top left to top right
-                // to bottom left to right
-                return new Vector2[]
-                {
-                    new Vector2(0, 0),
-                    new Vector2(1, 0),
-
-                    new Vector2(0, 1),
-                    new Vector2(1, 1),
                 };
             }
         }
@@ -196,7 +127,7 @@ namespace Assets.Scripts.WorldMap
             InnerHighlighter.vertices = outerVerts.ToArray();
             InnerHighlighter.triangles = edgeTriangles.ToArray();
 
-            SetMeshColors(ref InnerHighlighter, InnerHighlightColor);
+            InnerHighlighter.SetFullColor(InnerHighlightColor);
 
             return InnerHighlighter;
 
@@ -207,80 +138,205 @@ namespace Assets.Scripts.WorldMap
             };
         }
 
+        /// <summary>
+        /// The number of vertices per side of border. Use this to color in the triangles in groups
+        /// </summary>
+        public static int BorderSideVertexCount = 6;
         private Mesh BaseOuterHighlighter;
-        public Mesh GetOuterHighlighter(int[] sides)
+
+        /// <summary>
+        /// Creates a schematic for a base border highlighter and returns a new mesh. You have to manually draw/activate the border sides you want
+        /// </summary>
+        /// <returns></returns>
+        public Mesh GetBaseOuterHighlighter()
         {
-            Mesh baseOuter = GetBaseOuterHighlighter();
+            // this will create 2 hexes, an inner and outer hex,
+            // you then have to manually draw in the sides want
+            if (BaseOuterHighlighter != null)
+            {
+                return BaseOuterHighlighter.CloneMesh();
+            }
 
-            List<int> triangles = new List<int>();
+            List<Vector3> outerVerts = new List<Vector3>();
+            List<Vector3> innerVerts = new List<Vector3>();
 
-            sides = sides.Distinct().ToArray();
+            outerVerts = VertexCorners.ToList();
 
+            for (int i = 0; i < 6; i++)
+            {
+                innerVerts.Add(outerVerts[i] * (1 - outerHexSize));
+            }
+
+            BaseOuterHighlighter = new Mesh();
+
+            outerVerts.AddRange(innerVerts);
+
+            // The base highlighter will have 2 vertices per position
+            // this is because we want each side to be able to draw its own color.
+            // Unity only allows 1 color per vertex, but since the sides/border share vertices, we need to create 2 vertices per side, and assign them unique colors
+            outerVerts.AddRange(VertexCorners);
+            outerVerts.AddRange(innerVerts);
+
+            BaseOuterHighlighter.vertices = outerVerts.ToArray();
+            BaseOuterHighlighter.SetFullColor(Color.white);
+
+            return BaseOuterHighlighter.CloneMesh();
+        }
+
+        public void AddOuterHighlighter(Mesh outerMesh, int[] sides, Color[] colors)
+        {
+            if (sides == null || colors == null)
+            {
+                throw new ArgumentNullException("sides and colors arrays must not be null");
+            }
+
+            if (sides.Length != colors.Length)
+            {
+                throw new ArgumentException("sides and colors arrays must be the same length");
+            }
+
+            List<int> triangles = outerMesh.triangles.ToList();
+            List<Color> meshColors = outerMesh.colors.ToList();
+
+
+            int index = -1;
+            int[] vertTriangles = new int[3];
+
+            int count = -1;
+
+            // get the vertices of the triangles that make up the sides
+            // loop through each side and get the list of vertices that make up the triangles
+            // we then find the index of said vertices in the original triangles array, to determine if the border mesh already exists
+            // and remove  them from the triangles array of the outerMesh
             foreach (int side in sides)
             {
+                count++;
                 // a hex only has 6 sides, indexed 0 - 5
-                if (side > 5)
+                if (side > 5 || side < 0)
                 {
                     continue;
                 }
-                triangles.AddRange(SetInnerTriangles(side));
+
+                vertTriangles = GetBorderTriangles(side);
+
+                index = triangles.FindIndex(vertTriangles);
+
+                if (index == -1)
+                {
+                    Color sideColor = colors[count];
+                    triangles.AddRange(vertTriangles);
+
+                    // set the color of the vertices we just added
+                    foreach (int vert in vertTriangles)
+                    {
+                        meshColors[vert] = sideColor;
+                    }
+                }
             }
 
-            baseOuter.triangles = triangles.ToArray();
+            outerMesh.triangles = triangles.ToArray();
+            outerMesh.colors = meshColors.ToArray();
 
-            SetMeshColors(ref baseOuter, OuterHighlightColor);
+        }
 
-            return baseOuter;
+        public void RemoveOuterHighlighter(Mesh outerMesh, int[] sides)
+        {
+            List<int> triangles = outerMesh.triangles.ToList();
+            List<Color> sideColors = outerMesh.colors.ToList();
 
-            Mesh GetBaseOuterHighlighter()
+            sides = sides.Distinct().ToArray();
+
+            int index = -1;
+            int[] vertTriangles = new int[3];
+
+            Exception tempException = new Exception();
+
+            // get the vertices of the triangles that make up the sides
+            // loop through each side and get the list of vertices that make up the triangles
+            // we then find the index of said vertices in the original triangles array, to determine if the border mesh already exists
+            // and remove  them from the triangles array of the outerMesh
+            foreach (int side in sides)
             {
-                // this will create 2 hexes, an inner and outer hex,
-                // you then have to manually draw in the sides want
-                if (BaseOuterHighlighter != null)
+                // a hex only has 6 sides, indexed 0 - 5
+                if (side > 5 || side < 0)
                 {
-                    return BaseOuterHighlighter.CloneMesh();
+                    continue;
                 }
 
-                List<Vector3> outerVerts = new List<Vector3>();
-                List<Vector3> innerVerts = new List<Vector3>();
+                vertTriangles = GetBorderTriangles(side);
 
-                outerVerts = VertexCorners.ToList();
+                index = triangles.FindIndex(vertTriangles);
 
-                for (int i = 0; i < 6; i++)
+                if (index == -1)
                 {
-                    innerVerts.Add(outerVerts[i] * (1 - outerHexSize));
+                    continue;
                 }
 
-                BaseOuterHighlighter = new Mesh();
-
-                outerVerts.AddRange(innerVerts);
-
-                BaseOuterHighlighter.vertices = outerVerts.ToArray();
-
-                SetMeshColors(ref BaseOuterHighlighter, OuterHighlightColor);
-
-                return BaseOuterHighlighter;
-
+                // each side has 2 triangles, with 3 vertices per triangle, so we remove 6 elements
+                triangles.TryRemoveElementsInRange(index,
+                    vertTriangles.Length, out tempException);
             }
 
-            int[] SetInnerTriangles(int vertexIndex) => new int[6]
+            outerMesh.triangles = triangles.ToArray();
+        }
+
+        /// <summary>
+        /// Will either add or remove the triangles of border mesh
+        /// </summary>
+        /// <param name="outerMesh"></param>
+        /// <param name="sides"></param>
+        /// <param name="add"></param>
+        private void ModifyOuterHighlighter(Mesh outerMesh, int[] sides,
+                                                             bool add)
+        {
+            
+        }
+
+
+
+
+
+        public int[] GetBorderTriangles(int vertexIndex)
+        {
+            int[] baseTriangles = SetBorderTriangles(vertexIndex);
+
+            // the below offsets were manually calculated
+            int[] offset1 = { 0, 0, 0, 0, 0, 0 }; // applies when vIndex = 0
+            int[] offset2 = { 12, 0, 0, 12, 12, 0 }; // applies when vindex = 1,2,3 4
+            int[] offset3 = { 12, 12, 12, 12, 12, 12 }; // applies when vIndex = 5
+
+            if (vertexIndex == 0)
+            {
+                AddArray(baseTriangles, offset1);
+            }
+            else if (vertexIndex < 5)
+            {
+                AddArray(baseTriangles, offset2);
+            }
+            else
+            {
+                // vertexIndex = 6
+                AddArray(baseTriangles, offset3);
+            }
+
+            return baseTriangles;
+
+            void AddArray(int[] baseArray, int[] offset)
+            {
+                for (int i = 0; i < baseArray.Length; i++)
+                {
+                    baseArray[i] = baseArray[i] + offset[i];
+                }
+            }
+
+            int[] SetBorderTriangles(int vertexIndex) => new int[6]
             {
                 vertexIndex % 6, (vertexIndex + 1) % 6, vertexIndex == 5 ? 6 : vertexIndex + 7,
                 vertexIndex + 6, vertexIndex, vertexIndex == 5 ? 6 : vertexIndex + 7
             };
         }
 
-        private void SetMeshColors(ref Mesh aMesh, Color color)
-        {
-            Color[] colors = new Color[aMesh.vertexCount];
 
-            for (int i = 0; i < colors.Length; i++)
-            {
-                colors[i] = color;
-            }
-
-            aMesh.colors = colors.ToArray();
-        }
 
 #if UNITY_EDITOR
 

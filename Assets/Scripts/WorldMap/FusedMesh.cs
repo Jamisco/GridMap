@@ -185,16 +185,12 @@ namespace Assets.Scripts.WorldMap
         }
 
         /// <summary>
-        /// Returns true or false if mesh was successfully removed
+        /// Gets the start location of the vertices and triangles of a particular mesh. The index will be the index of the hex hash
         /// </summary>
-        /// <param name="hash"></param>
-        /// <param name="position"></param>
+        /// <param name="index">ndex of the hex hash</param>
         /// <returns></returns>
-        private bool RemoveMesh_NoUpdate(int hash, int position = -1)
+        private (int vertIndex, int triIndex) GetMeshIndices(int index)
         {
-            // this allows us to skip having to refind the index again
-            int index = position == -1 ? MeshHashes.IndexOf(hash) : position;
-
             if (index != -1)
             {
                 var size = MeshSizes[index];
@@ -208,31 +204,69 @@ namespace Assets.Scripts.WorldMap
                     vertIndex += MeshSizes[i].vertexCount;
                 }
 
-                try
-                {
-                    Exception e = new Exception("Error when removing mesh");
-
-                    // error might occur if some of the below list are empty.
-                    // this might be because they were never filled to begin with
-                    Vertices.TryRemoveElementsInRange(vertIndex, size.vertexCount, out e);
-                    Triangles.TryRemoveElementsInRange(triIndex, size.triangleCount, out e);
-                    Colors.TryRemoveElementsInRange(vertIndex, size.vertexCount, out e);
-                    UVs.TryRemoveElementsInRange(vertIndex, size.vertexCount, out e);
-
-                }
-                catch (Exception)
-                {
-
-                }
-
-                RemoveFromList(index);
-
-                RecalculateTriangles(-size.vertexCount, triIndex);
-
-                return true;
+                return (vertIndex, triIndex);
             }
 
-            return false;
+            return (-1, -1);
+        }
+        
+        /// <summary>
+        /// Returns true or false if mesh was successfully removed
+        /// </summary>
+        /// <param name="hash"></param>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        private bool RemoveMesh_NoUpdate(int hash, int position = -1)
+        {
+            int index = position == -1 ? MeshHashes.IndexOf(hash) : position;
+
+            if(index == -1)
+            {
+                return false;
+            }
+
+            var size = MeshSizes[index];
+
+            (int vert, int tri) indices = GetMeshIndices(index);
+
+            if(indices.vert == -1 || indices.tri == -1)
+            {
+                return false;
+            }
+
+            try
+            {
+                Exception e = new Exception("Error when removing mesh");
+
+                // error might occur if some of the below list are empty.
+                // this might be because they were never filled to begin with
+                Vertices.TryRemoveElementsInRange(indices.vert, 
+                                                size.vertexCount, out e);
+
+                Triangles.TryRemoveElementsInRange(indices.tri, 
+                                                    size.triangleCount, out e);
+
+                if (Colors.Count > 0)
+                {
+                    Colors.TryRemoveElementsInRange(indices.vert,
+                                                     size.vertexCount, out e);
+                }
+
+                if (UVs.Count > 0)
+                {
+                    UVs.TryRemoveElementsInRange(indices.vert, size.vertexCount, out e);
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+            RemoveFromList(index);
+
+            RecalculateTriangles(-size.vertexCount, indices.tri);
+
+            return true;
         }
 
         /// <summary>
@@ -241,7 +275,7 @@ namespace Assets.Scripts.WorldMap
         /// <param name="mesh"></param>
         /// <param name="hash"></param>
         /// <param name="offset"></param>
-        public void AddMesh(Mesh mesh, int hash, Vector3 offset)
+        public void InsertMesh(Mesh mesh, int hash, Vector3 offset)
         {
             AddMesh_NoUpdate(mesh, hash, offset);
 
@@ -251,7 +285,7 @@ namespace Assets.Scripts.WorldMap
         /// Returns true or false if mesh was successfully removed
         /// </summary>
         /// <param name="hash"></param>
-        /// <param name="position">The position you want to start searching from </param>
+        /// <param name="position">The position you want to StartPosition searching from </param>
         /// <returns></returns>
         public bool RemoveMesh(int hash, int position = -1)
         {
@@ -296,6 +330,11 @@ namespace Assets.Scripts.WorldMap
             UVs.AddRange(aMesh.uv);
         }
 
+        /// <summary>
+        /// When you modify the triangles, you now also have to recalculate the triangles that came after it, such that the index are proper
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="startIndex"></param>
         private void RecalculateTriangles(int offset, int startIndex = 0)
         {
             for (int i = startIndex; i < Triangles.Count; i++)
@@ -308,6 +347,53 @@ namespace Assets.Scripts.WorldMap
         {
             return MeshHashes.IndexOf(hash) == -1 ? false : true;
         }
+
+        /// <summary>
+        /// Returns the a NEW mesh with the given hash. Returns null if no mesh was found. Modifying this mesh has no effect on the current fused mesh. If you want to modify the fusedMesh, after you have modified the returned mesh, you must call RemoveMesh and then InsertMesh again. Be advised, depending on the size of the fused mesh, this could be a costly operation.
+        /// </summary>
+        /// <param name="hash"></param>
+        /// <returns></returns>
+        public Mesh GetMesh(int hash)
+        {
+            int index = MeshHashes.IndexOf(hash);
+
+            if (index != -1)
+            {
+                Mesh mesh = new Mesh();
+
+                (int vert, int tri) indices = GetMeshIndices(index);
+
+                var size = MeshSizes[index];
+
+                mesh.vertices = Vertices.GetRange(indices.vert,                 size.vertexCount).ToArray();
+
+                // remember that triangles vertices are increased by the current index of vertex array. Hence when retrieving them, we must account for that offset by subtracting said index
+                int[] triangles = Triangles.GetRange(indices.tri, size.triangleCount).ToArray();
+
+                for (int i = 0; i < triangles.Length; i++)
+                {
+                    triangles[i] -= indices.vert;
+                }
+
+                mesh.triangles = triangles;
+
+                if (Colors.Count > 0)
+                {
+                    mesh.colors = Colors.GetRange(indices.vert,
+                                size.vertexCount).ToArray();
+                }
+
+                if(UVs.Count > 0)
+                {
+                    mesh.uv = UVs.GetRange(indices.vert, size.vertexCount).ToArray();
+                }
+
+                return mesh;
+            }
+
+            return null;
+        }
+
         public Mesh GetMesh()
         {
             Mesh mesh = new Mesh();

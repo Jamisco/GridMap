@@ -15,7 +15,7 @@ namespace Assets.Scripts.Miscellaneous
     {
         public struct HexTile : IEquatable<HexTile>
         {
-            // Distance travelled is the distance from the start to the current Tile 
+            // Distance travelled is the distance from the StartPosition to the current Tile 
             // Distance left is the distance left from the current to the target tile 
 
             public int distanceTravelled;
@@ -140,10 +140,10 @@ namespace Assets.Scripts.Miscellaneous
         public static Vector2Int MapHexSize { get; set; }
 
         /// <summary>
-        /// Finds path from given start point to end point. Returns an empty list if the path couldn't be found.
+        /// Finds path from given StartPosition point to EndPosition point. Returns an empty list if the path couldn't be found.
         /// </summary>
-        /// <param name="startPoint">Start tile.Non Axial Position</param>
-        /// <param name="endPoint">Destination tile. Non Axial Position</param>
+        /// <param name="startPoint">Start tile.Non Axial LocalPosition</param>
+        /// <param name="endPoint">Destination tile. Non Axial LocalPosition</param>
         /// Credits: https://blog.theknightsofunity.com/pathfinding-on-a-hexagonal-grid-a-algorithm/
         public static List<HexTile> FindPath(Vector3Int start, Vector3Int stop, Vector3Int maxSize)
         {
@@ -155,13 +155,13 @@ namespace Assets.Scripts.Miscellaneous
 
             List<HexTile> closestTiles = new List<HexTile>();
 
-            // Prepare the start tile.
+            // Prepare the StartPosition tile.
             HexTile currentTile = startPoint;
 
             currentTile.distanceTravelled = 0;
             currentTile.distanceLeft = GetEstimatedPathCost(startPoint.AxialPosition, stopPoint.AxialPosition, maxSize);
 
-            // Add the start tile to the open list.
+            // AddHex the StartPosition tile to the open list.
             openPathTiles.Add(currentTile);
 
             HexTile tempTile;
@@ -276,7 +276,7 @@ namespace Assets.Scripts.Miscellaneous
         }
 
         /// <summary>
-        /// Returns estimated path cost from given start position to target position of hex tile using Manhattan distance.
+        /// Returns estimated path cost from given StartPosition position to target position of hex tile using Manhattan distance.
         /// </summary>
         /// <param name="startPosition">Start position.</param>
         /// <param name="targetPosition">Destination position.</param>
@@ -473,7 +473,7 @@ namespace Assets.Scripts.Miscellaneous
 
                         if (s == 0)
                         {
-                            // the first value of the loopOrder array is merely meant to set the start position
+                            // the first value of the loopOrder array is merely meant to set the StartPosition position
                             // it should not be repeated
                             startPos = currentPos;
                             break;
@@ -481,7 +481,7 @@ namespace Assets.Scripts.Miscellaneous
                     }
                 }
 
-                // we start back from position one
+                // we StartPosition back from position one
                 currentPos = startPos;
 
                 counter++;
@@ -598,7 +598,7 @@ namespace Assets.Scripts.Miscellaneous
         {
             Vector3Int[] neighbors = new Vector3Int[6];
 
-            // we start at index 1 because out getNeighborHex is also index from the number 1
+            // we StartPosition at index 1 because out getNeighborHex is also index from the number 1
             for (int i = 1; i <= 6; i++)
             {
                 neighbors[i - 1] = GetNeighborHex(curPos, i, mapSize);
@@ -624,8 +624,8 @@ namespace Assets.Scripts.Miscellaneous
 
             int endXPos = startPos.x + minWidth; // represents the X position to stop at
 
-            int startX = startPos.x; //start at top
-            int startY = startPos.y + height;       // start at top
+            int startX = startPos.x; //StartPosition at top
+            int startY = startPos.y + height;       // StartPosition at top
 
             // draw top to middle (including middle)
             for (int y = startY; y >= startPos.y; y--)
@@ -640,8 +640,8 @@ namespace Assets.Scripts.Miscellaneous
 
             // draw middle to bottom (excluding middle)
 
-            startX = startPos.x + height; // start at bottom
-            startY = startPos.y - height; // start at bottom
+            startX = startPos.x + height; // StartPosition at bottom
+            startY = startPos.y - height; // StartPosition at bottom
 
             endXPos = startX + minWidth; // represents the X position to stop at
 
