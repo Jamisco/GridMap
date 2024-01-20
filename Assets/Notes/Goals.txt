@@ -20,3 +20,36 @@ NEW GOALS
 
 - Hex can either be pointy top or flat top
 - Each has can have a maximum of
+
+-------------- New Goals ------------------------------
+
+	MUST be completed by the end of January
+
+- The goal hence forth is to create a map that can be used for a game. Any 2d (with slight 3d) maps should be able to create with this why the use of materials.
+	- 3d is optional but preferred
+
+- Map Should support square tiles and hex tiles, with the ability to change the size of the hexes
+	- Hexes should be able to be pointy top or flat top
+	- Squares can be rectangular or square
+
+- Map must have Procedural generation aspects in mine but MUST also have unity editor map builder
+
+- Map must be able to be saved and loaded
+- Map must support both sprites and materials and colors
+- Map will not have animation
+	- User can add animation to the map if they want to
+- Map will have no lighting in the materials themselves
+	- We will be using unity lighting and praying to God that it works
+
+- Map should possible have a better way to shape the hexes,
+	- Each tile will have an option to set the number of vertices for it
+	
+- Map should have colliders
+	- colliders can be disabled
+
+- shader should have tiling options for their materials
+
+- User can mark specific tiles to be the considered as their own seperate entity
+- Tile spacing
+- You can highlight with a circle
+
