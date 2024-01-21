@@ -1,3 +1,1 @@
-# Case-Malachite
- 2D Procedural Map Generation Using Unity
-"# GridMap" 
+Alternative Tile Map maker similar to Unity Tile map system
